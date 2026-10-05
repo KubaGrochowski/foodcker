@@ -563,6 +563,19 @@ button:not(:disabled):active{transform:scale(.96)}
 .gm-i em{position:absolute;right:9px;top:50%;transform:translateY(-50%);font:500 12px var(--f-mono);font-style:normal;color:var(--ink-3);pointer-events:none}
 .gm.p,.gbar .p{--m:var(--p)}.gm.f,.gbar .f{--m:var(--f)}.gm.c,.gbar .c{--m:var(--c)}
 @media (max-width:680px){.gm{grid-template-columns:1fr 66px 80px;gap:6px;padding-left:10px}.gm-n{font-size:14px;gap:6px}.gm-i input{font-size:16px;padding-right:22px}.gm-i em{right:7px}}
+/* wpisanie ręczne: duże pole kalorii i trzy pola makro */
+.qk{display:flex;align-items:baseline;justify-content:center;gap:8px;padding:6px 0 4px;border-bottom:1px solid var(--line);cursor:text}
+.qk input{width:5.5ch;text-align:right;font:600 40px var(--f-mono);border:0;background:transparent;color:var(--ink);padding:0;-moz-appearance:textfield}
+.qk input:focus{outline:0}
+.qk input::placeholder{color:var(--ink-3)}
+.qk input::-webkit-outer-spin-button,.qk input::-webkit-inner-spin-button{-webkit-appearance:none}
+.qk span{font:600 18px var(--f-mono);color:var(--ink-3)}
+.qk:focus-within{border-bottom-color:var(--accent)}
+.qm{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.qm-f{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:var(--radius);background:var(--surface-2);border:1px solid var(--line);min-width:0}
+.qm-f .gm-n{font-size:13px}
+.qm-f.p{--m:var(--p)}.qm-f.f{--m:var(--f)}.qm-f.c{--m:var(--c)}
+.qm-f .gm-i input::placeholder{color:var(--ink-3)}
 .split-sum{font:500 12px var(--f-mono);color:var(--ink-3);text-align:center}
 .split-sum.bad{color:var(--warn)}
 .split-sum.good{color:var(--accent)}

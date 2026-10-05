@@ -248,7 +248,7 @@
     }));
     $('s-go').addEventListener('click', () => { if (file) runScan(file, $('s-note').value.trim(), type); });
     overlay.querySelector('[data-barcode]').addEventListener('click', () => openBarcode(type));
-    overlay.querySelector('[data-manual]').addEventListener('click', () => openMealForm(newDraft(type)));
+    overlay.querySelector('[data-manual]').addEventListener('click', () => openQuickForm(newDraft(type)));
   }
 
   /* ---------- kod kreskowy: aparat + Open Food Facts (darmowa baza produktów, bez klucza) ---------- */
@@ -305,7 +305,7 @@
     if (!p || kcal100 == null) {
       // brak w bazie albo bez wartości odżywczych: od razu formularz do wpisania ręcznie
       const name = p ? (p.product_name_pl || p.product_name || '') : '';
-      openMealForm(newDraft(type, { name, items: [{ n: name, g: 100, kcal: 0, p: 0, f: 0, c: 0 }] }));
+      openQuickForm(newDraft(type, { name }));
       toast(p ? 'Produkt bez wartości odżywczych — wpisz je ręcznie' : 'Nie ma tego produktu w bazie — wpisz go ręcznie');
       return;
     }
@@ -370,7 +370,7 @@
       const msg = scanError(err);
       overlay.innerHTML = sheet('Nie udało się', '', `<div class="ai-note">${esc(msg)}</div><div class="confirm"><button data-retry>Spróbuj ponownie</button><button class="yes" style="background:var(--ink)" data-manual>Wpisz ręcznie</button></div>`, 'Błąd skanowania');
       overlay.querySelector('[data-retry]').addEventListener('click', () => runScan(file, note, type));
-      overlay.querySelector('[data-manual]').addEventListener('click', () => openMealForm(newDraft(type, { th, big })));
+      overlay.querySelector('[data-manual]').addEventListener('click', () => openQuickForm(newDraft(type, { th })));
     }
   }
   function scanError(err) {
@@ -455,6 +455,33 @@
     if (view !== 'day' || key(selDay) !== m.day) { view = 'day'; selDay = fromKey(m.day); animList = true; }
     render();
     toast(isNew ? `Dodano „${m.name}” · ${r0(totals(m.items).kcal)} kcal` : 'Zapisano');
+  }
+  // Wpisanie ręczne: tylko nazwa, kalorie i makro (bez składników, gramatury, pory i godziny — dzień = oglądany, godzina = teraz)
+  function openQuickForm(d) {
+    const editing = !!d.id, t = editing ? totals(d.items) : { kcal: '', p: '', f: '', c: '' };
+    const v = x => (x === '' || x == null) ? '' : r1(x);
+    overlay.innerHTML = sheet(editing ? 'Posiłek' : 'Wpisz ręcznie', editing ? dateLabel(d.day) : '', `
+      <div class="field"><label for="q-name">Nazwa</label><input id="q-name" type="text" maxlength="80" value="${esc(d.name || '')}" placeholder="np. Kanapka z serem" autocomplete="off"></div>
+      <label class="qk"><input id="q-kcal" type="text" inputmode="decimal" autocomplete="off" value="${v(t.kcal)}" placeholder="0" aria-label="Kalorie"><span>kcal</span></label>
+      <div class="qm">${[['p', 'Białko'], ['f', 'Tłuszcze'], ['c', 'Węgle']].map(([m, l]) => `<div class="qm-f ${m}"><span class="gm-n"><i></i>${l}</span><label class="gm-i"><input id="q-${m}" type="text" inputmode="decimal" autocomplete="off" value="${v(t[m])}" placeholder="0" aria-label="${l} w gramach"><em>g</em></label></div>`).join('')}</div>
+      <div class="sheet-foot"><button class="primary" id="q-save">${editing ? 'Zapisz' : 'Dodaj do dnia'}</button>${editing ? `<button class="danger" id="q-del">Usuń</button>` : ''}</div>`, 'Wpisz ręcznie');
+    const num = id => Math.max(0, parseFloat(String($(id).value).replace(',', '.')) || 0);
+    $('q-save').addEventListener('click', () => {
+      const name = $('q-name').value.trim(), kcal = num('q-kcal');
+      if (!name) { toast('Wpisz nazwę'); $('q-name').focus(); return; }
+      if (!kcal && !num('q-p') && !num('q-f') && !num('q-c')) { toast('Wpisz kalorie'); $('q-kcal').focus(); return; }
+      const isNew = !editing;
+      const m = { ...(editing ? d : {}), id: d.id || uid(), day: d.day, at: d.at, type: d.type, name, items: [{ n: name, g: 0, kcal: r0(kcal), p: r1(num('q-p')), f: r1(num('q-f')), c: r1(num('q-c')) }], th: d.th || null, ai: false, quick: true, created: d.created || Date.now() };
+      delete m.big;
+      state.meals[m.id] = m; save(); close();
+      userAct = true; if (isNew) freshId = m.id;
+      if (view !== 'day' || key(selDay) !== m.day) { view = 'day'; selDay = fromKey(m.day); animList = true; }
+      render();
+      toast(isNew ? `Dodano „${m.name}” · ${r0(kcal)} kcal` : 'Zapisano');
+    });
+    $('q-del')?.addEventListener('click', () => confirmDelete(d.id));
+    overlay.querySelectorAll('#q-name, .qk input, .qm input').forEach((i, n, all) => i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); (all[n + 1] || $('q-save')).focus?.(); if (!all[n + 1]) $('q-save').click(); } }));
+    if (!editing) $('q-name').focus();
   }
   function confirmDelete(id) {
     const m = state.meals[id]; if (!m) return;
@@ -600,7 +627,7 @@
     if (ml) {
       const m = state.meals[ml.dataset.meal]; if (!m) return;
       if (!calm()) { ml.animate({ transform: ['scale(1)', 'scale(1.025)', 'scale(1)'] }, { duration: 320, easing: 'cubic-bezier(.3,.7,.4,1)' }); ripple(e.clientX, e.clientY, 1); }
-      setTimeout(() => openMealForm(m), calm() ? 0 : 140); return;
+      setTimeout(() => (m.quick ? openQuickForm : openMealForm)(m), calm() ? 0 : 140); return;
     }
     if (e.target.closest('#add-meal') || e.target.closest('[data-scan]')) { openScan(); return; }
     const at = e.target.closest('[data-add-type]'); if (at) { openScan(at.dataset.addType); return; }
