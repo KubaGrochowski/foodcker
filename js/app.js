@@ -162,13 +162,12 @@
       if (!sameDay) el.querySelectorAll('.tube i').forEach((bar, j) => { const w = bar.style.width; bar.style.transition = 'none'; bar.style.width = '0'; requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transition = ''; bar.style.transitionDelay = (150 + j * 120) + 'ms'; bar.style.width = w; })); });
       else if (prevDayTot) el.querySelectorAll('.tube i').forEach(bar => { const mc = bar.closest('.mac').dataset.mac, w = bar.style.width, was = Math.min(100, (prevDayTot[mc] / (g[mc] || 1)) * 100); bar.style.transition = 'none'; bar.style.width = was + '%'; requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transition = ''; bar.style.width = w; })); });
     }
-    // przekroczenie progów: 100% kalorii = fala przez ekran, cel makro = bąbelki z rurki
+    // przekroczenie progu: 100% kalorii = fala przez ekran
     if (sameDay && userAct) {
       const was = prevDayTot;
       if (was.kcal < g.kcal && tot.kcal >= g.kcal && tot.kcal <= g.kcal * 1.1) setTimeout(() => celebrate(), 500);
-      ['p', 'f', 'c'].forEach(x => { if (was[x] < g[x] && tot[x] >= g[x]) setTimeout(() => { const tb = el.querySelector(`.mac.${x} .tube`); if (tb) bubbles(tb, 14); }, 700); });
     }
-    if (freshId) { const fm = el.querySelector(`[data-meal="${freshId}"] .th`); if (fm) setTimeout(() => bubbles(fm), 350); freshId = null; }
+    freshId = null;
     prevRing = lv; prevDayTot = tot; prevDayKey = k; userAct = false;
   }
 
@@ -246,7 +245,6 @@
       const f = inp.files?.[0]; if (!f) return;
       file = f; if (prev) URL.revokeObjectURL(prev); prev = URL.createObjectURL(f);
       $('s-img').src = prev; $('s-pick').hidden = true; $('s-picked').hidden = false;
-      const sc = overlay.querySelector('.sheet'); if (sc) bubbles($('s-img'), 10);
     }));
     $('s-go').addEventListener('click', () => { if (file) runScan(file, $('s-note').value.trim(), type); });
     overlay.querySelector('[data-barcode]').addEventListener('click', () => openBarcode(type));
@@ -282,7 +280,7 @@
           try {
             if (v.readyState >= 2) {
               const found = (await det.detect(v)).find(b => /^\d{8,14}$/.test(b.rawValue));
-              if (found && job === scanJob) { navigator.vibrate?.(40); const bc = $('bc'); if (bc) { bc.classList.add('hit'); bubbles(bc, 12); } stopCam(); lookup(found.rawValue, type, job); return; }
+              if (found && job === scanJob) { navigator.vibrate?.(40); const bc = $('bc'); if (bc) bc.classList.add('hit'); stopCam(); lookup(found.rawValue, type, job); return; }
             }
           } catch (_) { }
           bcLoop = setTimeout(tick, 180);
@@ -338,7 +336,7 @@
     });
   }
 
-  // 2. skanowanie: zdjęcie z sonarem, falą i bąbelkami, potem wynik od AI
+  // 2. skanowanie: zdjęcie z sonarem i falą, potem wynik od AI
   const MSGS = ['Zanurzam się w talerzu…', 'Rozpoznaję składniki…', 'Ważę porcje na oko…', 'Liczę białko, tłuszcze i węgle…', 'Wypływam z wynikiem…'];
   async function runScan(file, note, type) {
     const job = ++scanJob;
@@ -355,14 +353,13 @@
       mi = Math.min(MSGS.length - 1, mi + 1);
       $('scan-msg').innerHTML = `<span>${MSGS[mi]}</span>`;
       if (tide) tide.style.height = (22 + mi * 12) + '%';
-      const sc = $('scan'); if (sc) bubbles(sc, 6);
     }, 2200);
     try {
       const res = await window.Cloud.fn('meal-scan', { image: big.split(',')[1], mediaType: 'image/jpeg', note });
       clearInterval(msgInt);
       if (job !== scanJob) return;
       if (!res || !Array.isArray(res.items)) throw new Error('Pusta odpowiedź AI');
-      const sc = $('scan'); if (sc) { sc.classList.add('done'); if (tide) tide.style.height = '100%'; bubbles(sc, 16); }
+      const sc = $('scan'); if (sc) { sc.classList.add('done'); if (tide) tide.style.height = '100%'; }
       const items = res.items.map(it => ({ n: String(it.name || '').slice(0, 80), g: r0(it.grams), kcal: r0(it.kcal), p: r1(it.protein), f: r1(it.fat), c: r1(it.carbs) }));
       const d = newDraft(type, { name: res.name || '', items: items.length ? items : [{ n: '', g: 100, kcal: 0, p: 0, f: 0, c: 0 }], th, big, ai: true, comment: res.comment || '', conf: res.confidence || '' });
       setTimeout(() => { if (job === scanJob) openMealForm(d); }, calm() ? 0 : 650);
@@ -467,7 +464,6 @@
       const tile = document.querySelector(`[data-meal="${CSS.escape(id)}"]`);
       const go = () => { delete state.meals[id]; save(); userAct = true; render(); toast('Usunięto'); };
       if (!tile || calm()) { go(); return; }
-      bubbles(tile, 10);
       tile.animate({ opacity: [1, 0], transform: ['none', 'translateY(24px) scale(.96)'] }, { duration: 380, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }).onfinish = go;
     });
   }
@@ -614,7 +610,7 @@
     const sm = e.target.closest('[data-sum]'); if (sm) { sumDays = +sm.dataset.sum; animList = true; render(); return; }
     if (e.target.closest('[data-more]')) { hLimit += 14; render(); return; }
     const gd = e.target.closest('[data-goday]'); if (gd) { selDay = fromKey(gd.dataset.goday); setView('day'); window.scrollTo({ top: 0 }); return; }
-    const ring = e.target.closest('.ring'); if (ring && !calm()) { ripple(e.clientX, e.clientY, 1.4); bubbles(ring, 8); }
+    const ring = e.target.closest('.ring'); if (ring && !calm()) { ripple(e.clientX, e.clientY, 1.4); }
   });
   document.addEventListener('input', e => { if (e.target.id === 'h-q') { hQuery = e.target.value; hLimit = 14; renderHistory(); } });
   document.addEventListener('keydown', e => {
@@ -647,31 +643,13 @@
     clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 2600);
   }
 
-  /* ---------- morskie efekty: bąbelki, kręgi na wodzie, fala przez cały ekran, morze w tle ---------- */
+  /* ---------- morskie efekty: kręgi na wodzie, fala przez cały ekran, fale przy dolnej krawędzi ---------- */
   const sea = document.createElement('div');
   sea.className = 'sea'; sea.setAttribute('aria-hidden', 'true'); sea.innerHTML = SEA_SVG;
   document.body.appendChild(sea);
   const bed = document.createElement('div');
   bed.className = 'seabed'; bed.setAttribute('aria-hidden', 'true'); bed.innerHTML = SEA_SVG;
   document.body.appendChild(bed);
-  function bubbles(el, n = 11) {
-    if (calm()) return;
-    const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    for (let i = 0; i < n; i++) {
-      const s = 4 + Math.random() * 7, dx = (Math.random() - .5) * Math.min(r.width, 220) * 1.2, rise = 36 + Math.random() * 70, sway = (Math.random() - .5) * 18;
-      const b = document.createElement('i');
-      b.className = 'bubble';
-      Object.assign(b.style, { left: cx - s / 2 + 'px', top: cy - s / 2 + 'px', width: s + 'px', height: s + 'px' });
-      document.body.appendChild(b);
-      b.animate([
-        { transform: 'translate(0,0) scale(.3)', opacity: 0 },
-        { transform: `translate(${dx * .4}px,${-rise * .3}px) scale(1)`, opacity: 1, offset: .2 },
-        { transform: `translate(${dx * .7 + sway}px,${-rise * .7}px) scale(1)`, opacity: .9, offset: .7 },
-        { transform: `translate(${dx}px,${-rise}px) scale(1.5)`, opacity: 0 }
-      ], { duration: 700 + Math.random() * 500, delay: Math.random() * 120, easing: 'cubic-bezier(.3,.6,.4,1)', fill: 'backwards' }).onfinish = () => b.remove();
-      setTimeout(() => b.remove(), 1700);
-    }
-  }
   function ripple(x, y, k = 1) {
     if (calm() || (!x && !y)) return;
     [0, 140].forEach(delay => {
@@ -688,20 +666,6 @@
     if (calm()) return;
     sea.classList.remove('swell'); void sea.offsetWidth; sea.classList.add('swell');
     setTimeout(() => sea.classList.remove('swell'), 2700);
-    for (let i = 0; i < 26; i++) {
-      const s = 5 + Math.random() * 10, x = Math.random() * innerWidth;
-      const b = document.createElement('i');
-      b.className = 'bubble';
-      Object.assign(b.style, { left: x + 'px', top: innerHeight - 10 + 'px', width: s + 'px', height: s + 'px' });
-      document.body.appendChild(b);
-      const rise = innerHeight * (.3 + Math.random() * .45), sw = (Math.random() - .5) * 60;
-      b.animate([
-        { transform: 'translate(0,0)', opacity: 0 },
-        { transform: `translate(${sw * .5}px,${-rise * .4}px)`, opacity: .9, offset: .3 },
-        { transform: `translate(${sw}px,${-rise}px) scale(1.4)`, opacity: 0 }
-      ], { duration: 1400 + Math.random() * 900, delay: Math.random() * 500, easing: 'ease-out', fill: 'backwards' }).onfinish = () => b.remove();
-      setTimeout(() => b.remove(), 3200);
-    }
   }
   // Cel kalorii na dziś osiągnięty: niebieska fala przez ekran i podskok liczby.
   function celebrate() {
@@ -711,24 +675,6 @@
     document.querySelector('#view-day .ring')?.animate({ transform: ['scale(1)', 'scale(1.08)', 'scale(.98)', 'scale(1)'] }, { duration: 900, easing: 'ease-out' });
     swell();
   }
-  // Morze w tle: co kilka sekund z dna wypływa pojedynczy bąbelek.
-  function ambient() {
-    if (calm() || document.hidden || overlay.innerHTML) return;
-    const s = 4 + Math.random() * 9, x = Math.random() * innerWidth;
-    const b = document.createElement('i');
-    b.className = 'amb';
-    Object.assign(b.style, { left: x + 'px', top: innerHeight + 'px', width: s + 'px', height: s + 'px' });
-    document.body.appendChild(b);
-    const rise = innerHeight * (.5 + Math.random() * .5), sway = (Math.random() - .5) * 80;
-    b.animate([
-      { transform: 'translate(0,0)', opacity: 0 },
-      { transform: `translate(${sway * .3}px,${-rise * .25}px)`, opacity: .7, offset: .15 },
-      { transform: `translate(${-sway * .4}px,${-rise * .6}px)`, opacity: .55, offset: .6 },
-      { transform: `translate(${sway}px,${-rise}px) scale(1.3)`, opacity: 0 }
-    ], { duration: 7000 + Math.random() * 5000, easing: 'linear' }).onfinish = () => b.remove();
-    setTimeout(() => b.remove(), 13000);
-  }
-  setInterval(ambient, 2600);
 
   /* ---------- telefon: bez przybliżania ---------- */
   ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
