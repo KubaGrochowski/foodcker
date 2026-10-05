@@ -1,5 +1,5 @@
 /*
-  Grochu's makro — meal-scan: funkcja serwerowa Supabase (Deno), jedyne miejsce, które zna klucz OpenAI.
+  Foodcker — meal-scan: funkcja serwerowa Supabase (Deno), jedyne miejsce, które zna klucz OpenAI.
 
   Aplikacja wysyła zdjęcie posiłku (JPEG w base64, ~1024 px) i opcjonalną podpowiedź użytkownika.
   Model rozpoznaje danie, rozbija je na składniki z gramaturą i liczy kcal, białko, tłuszcze, węglowodany.

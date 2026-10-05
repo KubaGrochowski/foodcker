@@ -1,4 +1,4 @@
--- Grochu's makro — jednorazowa konfiguracja bazy (Supabase → SQL Editor → New query → wklej → Run).
+-- Foodcker — jednorazowa konfiguracja bazy (Supabase → SQL Editor → New query → wklej → Run).
 -- Ten sam projekt Supabase co Grochu's tracker, więc konto (e-mail + hasło) jest wspólne.
 
 -- 1. Dane użytkownika: jeden wiersz na konto (cele + posiłki z miniaturami), jak user_data w trackerze.

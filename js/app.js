@@ -1,4 +1,4 @@
-/* Grochu's makro — dziennik posiłków z AI: zdjęcie talerza → nazwa, składniki, kalorie i makro. Dane w localStorage + Supabase (js/cloud.js). */
+/* Foodcker — dziennik posiłków z AI: zdjęcie talerza → nazwa, składniki, kalorie i makro. Dane w localStorage + Supabase (js/cloud.js). */
 (() => {
   'use strict';
 

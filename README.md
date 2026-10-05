@@ -1,4 +1,4 @@
-# Grochu's makro
+# Foodcker
 
 Dziennik posiłków w stylu Fitatu: robisz zdjęcie talerza, AI (OpenAI) rozpoznaje danie, rozbija je na składniki z gramaturą i liczy kalorie, białko, tłuszcze i węglowodany. Wygląd 1:1 jak Grochu's tracker (czerń, Outfit + JetBrains Mono, morskie animacje), tylko akcent jasnoniebieski zamiast zielonego.
 Czysty HTML/CSS/JS, bez budowania. Konto i synchronizacja przez ten sam projekt Supabase co tracker (to samo konto e-mail + hasło).

@@ -1,4 +1,4 @@
-/* Grochu's makro — konto i synchronizacja z Supabase na żywo (logowanie e-mailem i hasłem, Realtime) oraz skanowanie posiłków przez AI.
+/* Foodcker — konto i synchronizacja z Supabase na żywo (logowanie e-mailem i hasłem, Realtime) oraz skanowanie posiłków przez AI.
    Bez zewnętrznych bibliotek: Supabase Auth (GoTrue), REST (PostgREST) i Edge Functions przez fetch.
 
    Model synchronizacji (jak w Grochu's tracker): stan aplikacji jest spłaszczany do elementów (cele, posiłek).

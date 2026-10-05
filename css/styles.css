@@ -295,7 +295,7 @@ button:not(:disabled):active{transform:scale(.96)}
 .schip{display:inline-flex;align-items:center;gap:6px;font:600 12px var(--f-mono);padding:5px 10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2)}
 .schip.rec{color:var(--warn)}
 .schip.weak{color:color-mix(in srgb,var(--miss) 85%,var(--ink))}
-/* ================= Grochu's makro ================= */
+/* ================= Foodcker ================= */
 :root{--p:#38BDF8;--f:#FB923C;--c:#A5B4FC}
 .o-hero b small{font-size:.32em;letter-spacing:0;color:var(--ink-3);font-weight:600;margin-left:6px}
 .o-hero span b{font:inherit;color:var(--ink)}
