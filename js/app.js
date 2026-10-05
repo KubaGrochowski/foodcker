@@ -482,25 +482,48 @@
     toast(`Dodano na dziś: ${m.name}`);
   }
 
-  // Cele: kalorie i gramy makro
+  // Cele (jak w Fitatu): wpisujesz kalorie, a makro ustawiasz jako % energii dnia albo w gramach — pola pilnują się nawzajem.
+  // Białko i węgle mają 4 kcal/g, tłuszcz 9 kcal/g. Zmiana kalorii przelicza gramy przy tych samych %. Suma % musi dać 100.
+  const KCAL_G = { p: 4, f: 9, c: 4 };
   function openGoals() {
-    const g = state.goals;
-    overlay.innerHTML = sheet('Cele dzienne', 'Kalorie i makroskładniki', `
-      <div class="goal-k"><button data-gk="-50" aria-label="Mniej">−</button><input id="g-kcal" type="number" inputmode="numeric" min="800" max="8000" step="50" value="${g.kcal}" aria-label="Kalorie"><button data-gk="50" aria-label="Więcej">+</button></div>
+    const g = state.goals, M = [['p', 'Białko'], ['f', 'Tłuszcze'], ['c', 'Węglowodany']];
+    let kcal = g.kcal;
+    const pct = {};
+    M.forEach(([m]) => { pct[m] = g.pct?.[m] ?? Math.round((g[m] * KCAL_G[m]) / g.kcal * 100); });
+    if (!g.pct) pct.c += 100 - (pct.p + pct.f + pct.c); // stare cele w gramach: zaokrąglona reszta do węgli, żeby było równe 100%
+    const grams = m => Math.round(kcal * pct[m] / 100 / KCAL_G[m]);
+    overlay.innerHTML = sheet('Cele dzienne', '', `
+      <div class="goal-k"><button data-gk="-50" aria-label="Mniej">−</button><input id="g-kcal" type="number" inputmode="numeric" min="800" max="8000" step="50" value="${kcal}" aria-label="Kalorie"><button data-gk="50" aria-label="Więcej">+</button></div>
       <p class="hint" style="margin-top:-8px">kcal dziennie</p>
-      <div class="split">${[['p', 'Białko', g.p], ['f', 'Tłuszcze', g.f], ['c', 'Węgle', g.c]].map(([k, l, v]) => `<div class="field ${k}"><label for="g-${k}"><i></i>${l}</label><input id="g-${k}" type="number" inputmode="numeric" min="0" value="${v}"></div>`).join('')}</div>
+      <div class="gbar" id="g-bar">${M.map(([m]) => `<i class="${m}"></i>`).join('')}</div>
+      <div class="gmac">${M.map(([m, l]) => `<div class="gm ${m}"><span class="gm-n"><i></i>${l}</span><label class="gm-i"><input data-pct="${m}" type="number" inputmode="numeric" min="0" max="100" aria-label="${l} w procentach"><em>%</em></label><label class="gm-i"><input data-g="${m}" type="number" inputmode="numeric" min="0" aria-label="${l} w gramach"><em>g</em></label></div>`).join('')}</div>
       <p class="split-sum" id="g-sum"></p>
-      <div class="chips"><button data-preset="cut">Redukcja</button><button data-preset="keep">Utrzymanie</button><button data-preset="bulk">Masa</button></div>
       <button class="primary" id="g-save">Zapisz cele</button>`, 'Cele');
-    const sum = () => { const p = +$('g-p').value || 0, f = +$('g-f').value || 0, c = +$('g-c').value || 0, k = +$('g-kcal').value || 0, m = p * 4 + f * 9 + c * 4; const el = $('g-sum'); el.textContent = `z makro: ${nf(m)} kcal (${k ? Math.round(m / k * 100) : 0}% celu)`; el.classList.toggle('bad', Math.abs(m - k) > k * .1); };
-    overlay.querySelectorAll('[data-gk]').forEach(b => b.addEventListener('click', () => { $('g-kcal').value = Math.max(800, (+$('g-kcal').value || 0) + +b.dataset.gk); sum(); }));
-    overlay.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => {
-      const k = +$('g-kcal').value || 2200, sp = { cut: [.35, .25, .40], keep: [.25, .30, .45], bulk: [.25, .25, .50] }[b.dataset.preset];
-      $('g-p').value = Math.round(k * sp[0] / 4); $('g-f').value = Math.round(k * sp[1] / 9); $('g-c').value = Math.round(k * sp[2] / 4); sum();
-    }));
-    overlay.querySelectorAll('input').forEach(i => i.addEventListener('input', sum)); sum();
+    const total = () => M.reduce((a, [m]) => a + pct[m], 0);
+    // odświeża pola; skip = pole, które użytkownik właśnie wpisuje (żeby nie skakał mu kursor)
+    const sync = skip => {
+      M.forEach(([m]) => {
+        const pi = overlay.querySelector(`[data-pct="${m}"]`), gi = overlay.querySelector(`[data-g="${m}"]`);
+        if (pi !== skip) pi.value = Math.round(pct[m]);
+        if (gi !== skip) gi.value = grams(m);
+        $('g-bar').querySelector('.' + m).style.width = Math.min(100, pct[m]) + '%';
+      });
+      const s = Math.round(total()), ok = s === 100, el = $('g-sum');
+      el.textContent = ok ? 'Razem 100% ✓' : `Razem ${s}% — ${s < 100 ? 'brakuje ' + (100 - s) : 'za dużo o ' + (s - 100)}%`;
+      el.classList.toggle('bad', !ok); el.classList.toggle('good', ok);
+      $('g-save').disabled = !ok;
+    };
+    const setKcal = v => { kcal = Math.max(0, Math.round(v) || 0); sync($('g-kcal')); };
+    $('g-kcal').addEventListener('input', e => setKcal(+e.target.value));
+    overlay.querySelectorAll('[data-gk]').forEach(b => b.addEventListener('click', () => { kcal = Math.max(800, kcal + +b.dataset.gk); $('g-kcal').value = kcal; sync(); }));
+    overlay.querySelectorAll('[data-pct]').forEach(i => i.addEventListener('input', () => { pct[i.dataset.pct] = Math.max(0, Math.min(100, +i.value || 0)); sync(i); }));
+    overlay.querySelectorAll('[data-g]').forEach(i => i.addEventListener('input', () => { const m = i.dataset.g; pct[m] = kcal ? Math.max(0, (+i.value || 0) * KCAL_G[m] / kcal * 100) : 0; sync(i); }));
+    overlay.querySelectorAll('.gm input').forEach(i => i.addEventListener('blur', () => sync())); // po wyjściu z pola: równe liczby w obu
+    sync();
     $('g-save').addEventListener('click', () => {
-      state.goals = { kcal: Math.max(800, +$('g-kcal').value || 2200), p: Math.max(0, +$('g-p').value || 0), f: Math.max(0, +$('g-f').value || 0), c: Math.max(0, +$('g-c').value || 0) };
+      if (Math.round(total()) !== 100 || kcal < 800) { toast(kcal < 800 ? 'Za mało kalorii (min. 800)' : 'Makro musi dać razem 100%'); return; }
+      const rp = { p: Math.round(pct.p), f: Math.round(pct.f) }; rp.c = 100 - rp.p - rp.f;
+      state.goals = { kcal, p: grams('p'), f: grams('f'), c: grams('c'), pct: rp };
       save(); close(); prevDayKey = null; render(); toast('Cele zapisane');
     });
   }

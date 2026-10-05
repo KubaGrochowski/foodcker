@@ -550,12 +550,23 @@ button:not(:disabled):active{transform:scale(.96)}
 .goal-k input{text-align:center;font:600 34px var(--f-mono);border:0;background:transparent;color:var(--ink);width:100%;-moz-appearance:textfield}
 .goal-k input:focus{outline:0}
 .goal-k input::-webkit-outer-spin-button,.goal-k input::-webkit-inner-spin-button{-webkit-appearance:none}
-.split{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.split .field input{text-align:center;font-family:var(--f-mono)}
-.split label i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--m);margin-right:6px}
-.split .p{--m:var(--p)}.split .f{--m:var(--f)}.split .c{--m:var(--c)}
+/* cele makro: pasek podziału dnia i wiersze % ↔ g */
+.gbar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--surface-3);gap:2px}
+.gbar i{display:block;height:100%;background:var(--m);transition:width .35s var(--ease)}
+.gmac{display:flex;flex-direction:column;gap:8px}
+.gm{display:grid;grid-template-columns:1fr 92px 104px;gap:8px;align-items:center;padding:8px 8px 8px 12px;border-radius:var(--radius);background:var(--surface-2);border:1px solid var(--line)}
+.gm-n{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14.5px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gm-n i{width:9px;height:9px;border-radius:50%;background:var(--m);flex:none}
+.gm-i{position:relative;display:block}
+.gm-i input{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;padding:8px 26px 8px 8px;font:600 15px var(--f-mono);text-align:right;-moz-appearance:textfield}
+.gm-i input:focus{outline:0;border-color:color-mix(in srgb,var(--m) 70%,var(--line))}
+.gm-i input::-webkit-outer-spin-button,.gm-i input::-webkit-inner-spin-button{-webkit-appearance:none}
+.gm-i em{position:absolute;right:9px;top:50%;transform:translateY(-50%);font:500 12px var(--f-mono);font-style:normal;color:var(--ink-3);pointer-events:none}
+.gm.p,.gbar .p{--m:var(--p)}.gm.f,.gbar .f{--m:var(--f)}.gm.c,.gbar .c{--m:var(--c)}
+@media (max-width:680px){.gm{grid-template-columns:1fr 66px 80px;gap:6px;padding-left:10px}.gm-n{font-size:14px;gap:6px}.gm-i input{font-size:16px;padding-right:22px}.gm-i em{right:7px}}
 .split-sum{font:500 12px var(--f-mono);color:var(--ink-3);text-align:center}
 .split-sum.bad{color:var(--warn)}
+.split-sum.good{color:var(--accent)}
 
 /* morze w tle: pojedyncze bąbelki płyną od dołu ekranu */
 .amb{position:fixed;z-index:0;pointer-events:none;border-radius:50%;border:1px solid color-mix(in srgb,var(--sea) 55%,transparent);background:radial-gradient(circle at 32% 30%,rgba(255,255,255,.5) 0 14%,transparent 20%),color-mix(in srgb,var(--sea) 7%,transparent)}

@@ -27,7 +27,7 @@ Bez kroku 2–3 aplikacja działa, ale zamiast wyniku skanu pokaże komunikat i 
 - **Dzień:** koło kalorii z wodą (poziom = % celu, pomarańczowe po przekroczeniu 110%), rurki białka/tłuszczu/węgli, posiłki pogrupowane (Śniadanie, Obiad, Kolacja, Przekąska). Strzałki ‹ › lub przesunięcie palcem zmienia dzień. Osiągnięcie celu kalorii (100–110%) = fala przez cały ekran.
 - **Historia:** wszystkie posiłki od najnowszych, wyszukiwarka po nazwie i składnikach, „Dodaj dziś” powtarza posiłek na dziś, klik w datę otwiera ten dzień.
 - **Podsumowanie:** 7 / 30 dni — słupki kalorii z linią celu, średnie makro, dni w celu, seria wpisów, najczęstsze posiłki.
-- **Cele** (menu ⋯ / ☰): kalorie i gramy makro, gotowe podziały Redukcja / Utrzymanie / Masa.
+- **Cele** (menu ⋯ / ☰): jak w Fitatu — wpisujesz kalorie, makro jako % dnia albo gramy (pola przeliczają się nawzajem, suma musi dać 100%).
 - Zdjęcie do AI jest zmniejszane do ~1024 px; w danych zostaje tylko miniatura 120 px.
 
 Po zmianach w plikach podbij wersję: `VERSION` w `sw.js` oraz `?v=` w `index.html` i w `SHELL` w `sw.js`.
