@@ -458,9 +458,7 @@
     const logged = !!window.Cloud?.user || !window.Cloud;
     $('auth').hidden = logged;
     $('app-main').hidden = !logged;
-    document.body.classList.toggle('gate', !logged); // ekran logowania bez animacji w tle (iPhone)
-    // kursor w polu e-mail tylko na komputerze — iPhone w trybie aplikacji źle znosi focus() bez dotyku
-    if (!logged) { close(); if (matchMedia('(hover: hover)').matches && !document.activeElement?.closest('#auth')) $('a-email').focus(); }
+    if (!logged) { close(); if (!document.activeElement?.closest('#auth')) $('a-email').focus(); }
   }
   function authError(err) {
     const m = (err?.message || '').toLowerCase(), c = err?.code || '';
@@ -629,22 +627,8 @@
     swell();
   }
   // Morze w tle: co kilka sekund z dna wypływa pojedynczy bąbelek.
-  // iPhone anuluje tapnięcie (i nie otwiera klawiatury), gdy w trakcie dotyku na stronie pojawi się nowy element —
-  // dlatego bąbelek nie wypływa chwilę po dotyku, przy wpisywaniu tekstu ani na ekranie logowania.
-  // Obejście błędu iPhone'a (WebKit, także Chrome na iOS): dotknięcie pola czasem nie otwiera klawiatury,
-  // więc pole dostaje focus() ręcznie w obsłudze dotyku — iOS pozwala wtedy pokazać klawiaturę.
-  let tStart = null;
-  document.addEventListener('touchstart', e => { const t = e.touches[0]; tStart = t ? [t.clientX, t.clientY] : null; }, { passive: true });
-  document.addEventListener('touchend', e => {
-    const f = e.target.closest?.('input:not([type=file]):not([type=radio]):not([type=checkbox]), textarea');
-    const t = e.changedTouches[0], moved = !tStart || !t || Math.hypot(t.clientX - tStart[0], t.clientY - tStart[1]) > 10; // przewijanie ≠ dotknięcie
-    if (f && !moved && document.activeElement !== f && !f.disabled) f.focus();
-  }, { passive: true });
-  let lastTouch = 0;
-  ['touchstart', 'pointerdown', 'focusin'].forEach(t => document.addEventListener(t, () => { lastTouch = Date.now(); }, { passive: true, capture: true }));
   function ambient() {
-    if (calm() || document.hidden || overlay.innerHTML || !$('auth').hidden) return;
-    if (Date.now() - lastTouch < 4000 || document.activeElement?.matches('input, textarea, select')) return;
+    if (calm() || document.hidden || overlay.innerHTML) return;
     const s = 4 + Math.random() * 9, x = Math.random() * innerWidth;
     const b = document.createElement('i');
     b.className = 'amb';
@@ -662,20 +646,8 @@
   setInterval(ambient, 2600);
 
   /* ---------- telefon: bez przybliżania ---------- */
-  // (na ekranie logowania wyłączone — w trybie aplikacji na iPhonie blokowały dotyk pól)
-  const gate = () => document.body.classList.contains('gate');
-  ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => { if (!gate()) e.preventDefault(); }, { passive: false }));
-  document.addEventListener('touchmove', e => { if (!gate() && (e.touches.length > 1 || (e.scale && e.scale !== 1))) e.preventDefault(); }, { passive: false });
-
-  /* ---------- diagnostyka ekranu logowania (iPhone, tryb aplikacji): co dostaje dotknięcie i czy pole ma focus ---------- */
-  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-  const seen = [];
-  const diag = m => { const el = document.querySelector('.ver'); if (!el || !gate()) return; if (m) { seen.push(m); if (seen.length > 5) seen.shift(); } el.textContent = `wersja 6 · ${standalone ? 'aplikacja' : 'przeglądarka'} · ${seen.length ? seen.join(' → ') : 'dotknij pola e-mail'}`; };
-  diag('');
-  ['touchstart', 'touchend', 'pointerdown', 'click'].forEach(t => document.addEventListener(t, e => {
-    const x = e.target; diag(`${t === 'pointerdown' ? 'pdown' : t}:${x.id || x.tagName?.toLowerCase()}`);
-  }, { passive: true, capture: true }));
-  document.addEventListener('focusin', e => diag(`FOCUS:${e.target.id || e.target.tagName}`), true);
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
 
   /* ---------- PWA ---------- */
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {

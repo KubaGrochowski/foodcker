@@ -547,12 +547,3 @@ button:not(:disabled):active{transform:scale(.96)}
 /* logo w nagłówku */
 .brandrow{display:flex;align-items:center;gap:10px}
 .brand{width:22px;height:22px;border-radius:6px;flex:none;animation:bob 3.2s ease-in-out infinite;transform-origin:50% 90%}
-
-/* iPhone: pola tekstowe zawsze da się kliknąć i zaznaczyć */
-input,textarea,select{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;pointer-events:auto}
-
-/* ekran logowania: bez animacji w tle (iPhone potrafi wtedy ignorować dotknięcie pól) */
-body.gate .seabed,body.gate .amb,body.gate .sea{display:none}
-body.gate .auth-brand img,body.gate .auth-card{animation:none}
-html:has(body.gate),body.gate{touch-action:auto}
-.ver{text-align:center;font:500 11px var(--f-mono);color:var(--ink-3);margin-top:-8px}
