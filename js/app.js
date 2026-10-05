@@ -134,18 +134,9 @@
     const el = $('view-day'), t = todayKey(), tot = dayTotals(k), g = state.goals, meals = mealsOn(k);
     const p = g.kcal ? tot.kcal / g.kcal : 0;
     const lv = waterLevel(Math.min(1, p));
-    const groups = TYPES.map(([tp, name]) => {
-      const ms = meals.filter(m => (m.type || 'sn') === tp);
-      return { tp, name, ms, kcal: ms.reduce((a, m) => a + totals(m.items).kcal, 0) };
-    });
-    let i = 0, list = '';
-    groups.forEach(gr => {
-      if (!gr.ms.length && meals.length) { list += `<div class="mgrp" style="--i:${i++}"><h3>${gr.name}</h3><button data-add-type="${gr.tp}" aria-label="Dodaj: ${gr.name}">${PLUS}</button></div>`; return; }
-      if (!gr.ms.length) return;
-      list += `<div class="mgrp" style="--i:${i++}"><h3>${gr.name}<em>${r0(gr.kcal)} kcal</em></h3><button data-add-type="${gr.tp}" aria-label="Dodaj: ${gr.name}">${PLUS}</button></div>`;
-      list += gr.ms.map(m => mealHtml(m, i++)).join('');
-    });
-    if (!meals.length) list = `<div class="break-card empty-day"><div class="bk-sea" aria-hidden="true">${SEA_SVG}<i class="bk-boat">${BOAT}</i></div><div class="bk-txt"><b>${k > t ? 'Ten dzień jeszcze przed Tobą' : 'Pusty talerz'}</b><small>Zrób zdjęcie posiłku — AI policzy kalorie i makro.</small></div><button class="primary" data-scan>Skanuj posiłek</button></div>`;
+    // historia tego dnia: najnowsze posiłki na górze (pełna historia jest w menu)
+    const newest = meals.slice().sort((a, b) => (b.at || '').localeCompare(a.at || '') || (b.created || 0) - (a.created || 0));
+    let list = meals.length ? `<div class="mgrp" style="--i:0"><h3>Posiłki<em>${meals.length} · ${r0(tot.kcal)} kcal</em></h3></div>` + newest.map((m, i) => mealHtml(m, i + 1, { type: true })).join('') : `<p class="empty">Brak posiłków tego dnia</p>`;
     const ring = `<div class="ring${p > 1.1 ? ' over' : ''}" style="--lv:${lv}" data-lvk="${k}"><i class="wv"></i><i class="wv b"></i><div class="ring-t"><small>zjedzone</small><b data-cnt="ring-kcal">${r0(tot.kcal)}</b><small>z ${nf(g.kcal)} kcal</small><em>${Math.round(p * 100)}%</em></div></div>`;
     el.className = slideDir > 0 ? 'slide-l' : slideDir < 0 ? 'slide-r' : '';
     el.innerHTML = `<div class="dgrid dslide"><div class="panel">${ring}<div class="macros">${macroRow('p', 'Białko', tot.p, g.p)}${macroRow('f', 'Tłuszcze', tot.f, g.f)}${macroRow('c', 'Węglowodany', tot.c, g.c)}</div></div>
