@@ -543,3 +543,7 @@ button:not(:disabled):active{transform:scale(.96)}
   .it-m input{font-size:15px}
   .hbar,.hlist,.dnav{max-width:none}
 }
+
+/* logo w nagłówku */
+.brandrow{display:flex;align-items:center;gap:10px}
+.brand{width:22px;height:22px;border-radius:6px;flex:none;animation:bob 3.2s ease-in-out infinite;transform-origin:50% 90%}
