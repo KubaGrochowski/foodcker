@@ -109,19 +109,11 @@
     $('view-history').hidden = view !== 'history';
     $('view-summary').hidden = view !== 'summary';
     $('go-today').closest('.weeknav').hidden = !(view === 'day' && k !== t);
-    // nagłówek: kalorie oglądanego dnia (w historii i podsumowaniu — dzisiejsze)
-    const hk = view === 'day' ? k : t, tot = dayTotals(hk), g = state.goals;
-    $('top-label').textContent = view === 'day' ? dateLabel(hk) : view === 'history' ? 'Historia posiłków' : `Ostatnie ${sumDays} dni`;
-    if (view === 'summary') {
-      const s = periodStats(sumDays);
-      countTo($('hero-kcal'), s.avg.kcal);
-      $('hero-sub').innerHTML = `kcal średnio · cel <b>${nf(g.kcal)}</b>`;
-    } else {
-      countTo($('hero-kcal'), tot.kcal);
-      const left = g.kcal - tot.kcal;
-      $('hero-sub').innerHTML = `<em>z ${nf(g.kcal)}</em> kcal · ${left >= 0 ? `zostało <b>${nf(r0(left))}</b>` : `ponad <b>${nf(r0(-left))}</b>`}`;
-    }
-    $('hero-kcal').classList.toggle('goal', view !== 'summary' && tot.kcal >= g.kcal * .95 && tot.kcal <= g.kcal * 1.1);
+    // nagłówek: w widoku dnia na samej górze dzień tygodnia i data ze strzałkami; w innych widokach sam tytuł
+    if (view === 'day') {
+      const d = fromKey(k);
+      $('top-l').innerHTML = `<div class="dnav"><button class="navarr" data-nav="-1" aria-label="Poprzedni dzień">‹</button><button class="dayname${k === t ? ' t' : ''}${slideDir > 0 ? ' sl' : slideDir < 0 ? ' sr' : ''}" data-today title="Wróć do dziś">${DAYS_FULL[dow(d)]}<em>, ${d.getDate()} ${MONTHS_GEN[d.getMonth()]}</em></button><button class="navarr" data-nav="1" aria-label="Następny dzień">›</button></div>`;
+    } else $('top-l').innerHTML = `<h1 class="ttl">${view === 'history' ? 'Historia' : 'Podsumowanie'}</h1>`;
     if (view === 'day') renderDay(k);
     else if (view === 'history') renderHistory();
     else renderSummary();
@@ -140,7 +132,6 @@
 
   function renderDay(k) {
     const el = $('view-day'), t = todayKey(), tot = dayTotals(k), g = state.goals, meals = mealsOn(k);
-    const d = fromKey(k), rel = relDay(k);
     const p = g.kcal ? tot.kcal / g.kcal : 0;
     const lv = waterLevel(Math.min(1, p));
     const groups = TYPES.map(([tp, name]) => {
@@ -157,8 +148,7 @@
     if (!meals.length) list = `<div class="break-card empty-day"><div class="bk-sea" aria-hidden="true">${SEA_SVG}<i class="bk-boat">${BOAT}</i></div><div class="bk-txt"><b>${k > t ? 'Ten dzień jeszcze przed Tobą' : 'Pusty talerz'}</b><small>Zrób zdjęcie posiłku — AI policzy kalorie i makro.</small></div><button class="primary" data-scan>Skanuj posiłek</button></div>`;
     const ring = `<div class="ring${p > 1.1 ? ' over' : ''}" style="--lv:${lv}" data-lvk="${k}"><i class="wv"></i><i class="wv b"></i><div class="ring-t"><small>zjedzone</small><b data-cnt="ring-kcal">${r0(tot.kcal)}</b><small>z ${nf(g.kcal)} kcal</small><em>${Math.round(p * 100)}%</em></div></div>`;
     el.className = slideDir > 0 ? 'slide-l' : slideDir < 0 ? 'slide-r' : '';
-    el.innerHTML = `<div class="dnav"><button class="navarr" data-nav="-1" aria-label="Poprzedni dzień">‹</button><div class="dayname${k === t ? ' t' : ''}">${rel ? rel + ' <em>· ' : ''}${d.getDate()} ${MONTHS_GEN[d.getMonth()]}${rel ? '</em>' : ` <em>· ${DAYS[dow(d)]}</em>`}</div><button class="navarr" data-nav="1" aria-label="Następny dzień">›</button></div>
-      <div class="dgrid dslide"><div class="panel">${ring}<div class="macros">${macroRow('p', 'Białko', tot.p, g.p)}${macroRow('f', 'Tłuszcze', tot.f, g.f)}${macroRow('c', 'Węglowodany', tot.c, g.c)}</div></div>
+    el.innerHTML = `<div class="dgrid dslide"><div class="panel">${ring}<div class="macros">${macroRow('p', 'Białko', tot.p, g.p)}${macroRow('f', 'Tłuszcze', tot.f, g.f)}${macroRow('c', 'Węglowodany', tot.c, g.c)}</div></div>
       <div class="mlist${hello ? ' hello' : animList || slideDir ? ' enter' : ''}">${list}</div></div>`;
     if (slideDir) { el.querySelector('.dslide').style.animation = 'none'; void el.offsetWidth; el.querySelector('.dslide').style.animation = ''; }
     // liczby i woda płyną od poprzedniego stanu tego samego dnia
@@ -525,7 +515,7 @@
     const at = e.target.closest('[data-add-type]'); if (at) { openScan(at.dataset.addType); return; }
     const vt = e.target.closest('.vtab[data-view]'); if (vt) { if (e.clientX || e.clientY) ripple(e.clientX, e.clientY, .7); setView(vt.dataset.view); return; }
     const nav = e.target.closest('[data-nav]'); if (nav) { step(+nav.dataset.nav); return; }
-    if (e.target.closest('#go-today')) { slideDir = selDay > new Date() ? -1 : 1; selDay = dayOnly(new Date()); render(); return; }
+    if (e.target.closest('#go-today, [data-today]')) { if (key(selDay) === todayKey()) return; slideDir = selDay > new Date() ? -1 : 1; selDay = dayOnly(new Date()); render(); return; }
     const sm = e.target.closest('[data-sum]'); if (sm) { sumDays = +sm.dataset.sum; animList = true; render(); return; }
     if (e.target.closest('[data-more]')) { hLimit += 14; render(); return; }
     const gd = e.target.closest('[data-goday]'); if (gd) { selDay = fromKey(gd.dataset.goday); setView('day'); window.scrollTo({ top: 0 }); return; }
@@ -623,7 +613,7 @@
     navigator.vibrate?.([15, 60, 25]);
     toast('Cel kalorii na dziś osiągnięty');
     if (calm()) return;
-    $('hero-kcal').animate({ transform: ['scale(1)', 'scale(1.14)', 'scale(.98)', 'scale(1)'] }, { duration: 900, easing: 'ease-out' });
+    document.querySelector('#view-day .ring')?.animate({ transform: ['scale(1)', 'scale(1.08)', 'scale(.98)', 'scale(1)'] }, { duration: 900, easing: 'ease-out' });
     swell();
   }
   // Morze w tle: co kilka sekund z dna wypływa pojedynczy bąbelek.
