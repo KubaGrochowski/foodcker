@@ -233,7 +233,7 @@
   function openScan(type) {
     const k = key(selDay);
     let file = null, prev = null;
-    overlay.innerHTML = sheet('Skanuj posiłek', view === 'day' && k !== todayKey() ? dateLabel(k) : '', `
+    overlay.innerHTML = sheet('Dodaj posiłek', view === 'day' && k !== todayKey() ? dateLabel(k) : '', `
       <div class="pick" id="s-pick"><label>${`<span class="bob">${CAM}</span>`}<span>Zrób zdjęcie</span><input type="file" accept="image/*" capture="environment" data-photo>${SEA_SVG}</label><label>${GALLERY}<span>Z galerii</span><input type="file" accept="image/*" data-photo>${SEA_SVG}</label></div>
       <div class="picked" id="s-picked" hidden>
         <div class="ph-prev"><img id="s-img" alt=""><label class="ph-change">Zmień zdjęcie<input type="file" accept="image/*" data-photo></label></div>
@@ -241,7 +241,7 @@
         <button class="primary" id="s-go">Analizuj posiłek</button>
       </div>
       <button class="opt" data-barcode><span class="opt-ic">${BARCODE}</span><span><b>Skanuj kod kreskowy</b><small>z bazy Open Food Facts</small></span><span class="opt-go">›</span></button>
-      <button class="linkish" data-manual>Wpisz ręcznie</button>`, 'Skanuj posiłek');
+      <button class="linkish" data-manual>Wpisz ręcznie</button>`, 'Dodaj posiłek');
     overlay.querySelectorAll('[data-photo]').forEach(inp => inp.addEventListener('change', () => {
       const f = inp.files?.[0]; if (!f) return;
       file = f; if (prev) URL.revokeObjectURL(prev); prev = URL.createObjectURL(f);
