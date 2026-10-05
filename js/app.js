@@ -320,6 +320,7 @@
     if (err?.status === 404 || m.includes('not found')) return 'Funkcja AI „meal-scan” nie jest jeszcze wdrożona w Supabase — instrukcja jest w README.';
     if (err?.status === 429 || m.includes('limit')) return 'Dzisiejszy limit skanów się skończył — wpisz posiłek ręcznie albo spróbuj jutro.';
     if (err?.status === 401) return 'Sesja wygasła — zaloguj się ponownie.';
+    if (err?.status === 402) return err.message;
     return 'AI nie odpowiedziało: ' + (err?.message || 'nieznany błąd');
   }
 

@@ -1,25 +1,24 @@
 /*
-  Grochu's makro — meal-scan: funkcja serwerowa Supabase (Deno), jedyne miejsce, które zna klucz Anthropic.
+  Grochu's makro — meal-scan: funkcja serwerowa Supabase (Deno), jedyne miejsce, które zna klucz OpenAI.
 
   Aplikacja wysyła zdjęcie posiłku (JPEG w base64, ~1024 px) i opcjonalną podpowiedź użytkownika.
-  Claude rozpoznaje danie, rozbija je na składniki z gramaturą i liczy kcal, białko, tłuszcze, węglowodany.
+  Model rozpoznaje danie, rozbija je na składniki z gramaturą i liczy kcal, białko, tłuszcze, węglowodany.
   Sumy liczy aplikacja (żeby po zmianie gramatury wszystko się zgadzało).
 
   Sekrety (Supabase → Edge Functions → Secrets):
-    ANTHROPIC_API_KEY  — klucz z console.anthropic.com (wymagany)
-    MEAL_SCAN_LIMIT    — opcjonalnie, domyślnie 30 skanów dziennie na użytkownika
+    OPENAI_API_KEY   — klucz z platform.openai.com (wymagany)
+    OPENAI_MODEL     — opcjonalnie, domyślnie gpt-6-luna (jak w Foodini)
+    MEAL_SCAN_LIMIT  — opcjonalnie, domyślnie 30 skanów dziennie na użytkownika
   SUPABASE_URL, SUPABASE_ANON_KEY i SUPABASE_SERVICE_ROLE_KEY Supabase dostarcza sam.
 */
-import Anthropic from "npm:@anthropic-ai/sdk";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const MODEL = "claude-opus-5-5";
+const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY");
+const MODEL = Deno.env.get("OPENAI_MODEL") ?? "gpt-6-luna";
 const DAILY_LIMIT = Number(Deno.env.get("MEAL_SCAN_LIMIT") ?? "30");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-const anthropic = new Anthropic(); // czyta ANTHROPIC_API_KEY
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -42,35 +41,40 @@ Zasady:
 - comment: jedno krótkie zdanie po polsku — co było trudne do oceny albo co warto poprawić ręcznie.`;
 
 const SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  properties: {
-    name: { type: "string" },
-    confidence: { type: "string", enum: ["low", "medium", "high"] },
-    comment: { type: "string" },
-    items: {
-      type: "array",
+  name: "meal_scan",
+  strict: true,
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      name: { type: "string" },
+      confidence: { type: "string", enum: ["low", "medium", "high"] },
+      comment: { type: "string" },
       items: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          name: { type: "string" },
-          grams: { type: "number" },
-          kcal: { type: "number" },
-          protein: { type: "number" },
-          fat: { type: "number" },
-          carbs: { type: "number" },
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            name: { type: "string" },
+            grams: { type: "number" },
+            kcal: { type: "number" },
+            protein: { type: "number" },
+            fat: { type: "number" },
+            carbs: { type: "number" },
+          },
+          required: ["name", "grams", "kcal", "protein", "fat", "carbs"],
         },
-        required: ["name", "grams", "kcal", "protein", "fat", "carbs"],
       },
     },
+    required: ["name", "confidence", "comment", "items"],
   },
-  required: ["name", "confidence", "comment", "items"],
 };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "Tylko POST" }, 405);
+  if (!OPENAI_KEY) return json({ error: "Brak klucza OPENAI_API_KEY w Supabase" }, 500);
 
   // kto pyta: zalogowany użytkownik aplikacji
   const auth = req.headers.get("Authorization") ?? "";
@@ -91,32 +95,35 @@ Deno.serve(async (req) => {
   if (limErr) return json({ error: "Limit: " + limErr.message }, 500);
   if (!ok) return json({ error: `Dzienny limit ${DAILY_LIMIT} skanów wykorzystany` }, 429);
 
-  try {
-    // deno-lint-ignore no-explicit-any
-    const params: any = {
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
       model: MODEL,
-      max_tokens: 16000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      output_config: { effort: "low", format: { type: "json_schema", schema: SCHEMA } },
-      system: SYSTEM,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: mediaType, data: image } },
-          { type: "text", text: note ? `Podpowiedź użytkownika: ${note}` : "Oszacuj ten posiłek." },
-        ],
-      }],
-    };
-    const msg = await anthropic.beta.messages.create(params);
-    if (msg.stop_reason === "refusal") return json({ error: "AI odmówiło analizy tego zdjęcia" }, 422);
-    // deno-lint-ignore no-explicit-any
-    const text = (msg.content as any[]).find((b) => b.type === "text")?.text;
-    if (!text) return json({ error: "AI nie zwróciło wyniku" }, 502);
-    return json(JSON.parse(text));
-  } catch (e) {
-    if (e instanceof Anthropic.RateLimitError) return json({ error: "AI jest chwilowo przeciążone — spróbuj za chwilę" }, 503);
-    if (e instanceof Anthropic.APIError) return json({ error: `AI: ${e.message}` }, 502);
-    return json({ error: e instanceof Error ? e.message : String(e) }, 500);
+      messages: [
+        { role: "system", content: SYSTEM },
+        {
+          role: "user",
+          content: [
+            { type: "image_url", image_url: { url: `data:${mediaType};base64,${image}`, detail: "high" } },
+            { type: "text", text: note ? `Podpowiedź użytkownika: ${note}` : "Oszacuj ten posiłek." },
+          ],
+        },
+      ],
+      response_format: { type: "json_schema", json_schema: SCHEMA },
+      max_completion_tokens: 4000,
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    if (text.includes("insufficient_quota")) return json({ error: "Brak środków na koncie OpenAI — doładuj saldo na platform.openai.com" }, 402);
+    if (res.status === 429) return json({ error: "OpenAI jest chwilowo przeciążone — spróbuj za chwilę" }, 503);
+    return json({ error: `OpenAI ${res.status}: ${text.slice(0, 300)}` }, 502);
   }
+  const data = await res.json();
+  const msg = data.choices?.[0]?.message;
+  if (msg?.refusal) return json({ error: "AI odmówiło analizy tego zdjęcia" }, 422);
+  if (!msg?.content) return json({ error: "AI nie zwróciło wyniku" }, 502);
+  try { return json(JSON.parse(msg.content)); }
+  catch { return json({ error: "AI zwróciło niepełny wynik — spróbuj ponownie" }, 502); }
 });

@@ -1,6 +1,6 @@
 # Grochu's makro
 
-Dziennik posiłków w stylu Fitatu: robisz zdjęcie talerza, AI (Claude) rozpoznaje danie, rozbija je na składniki z gramaturą i liczy kalorie, białko, tłuszcze i węglowodany. Wygląd 1:1 jak Grochu's tracker (czerń, Outfit + JetBrains Mono, morskie animacje), tylko akcent jasnoniebieski zamiast zielonego.
+Dziennik posiłków w stylu Fitatu: robisz zdjęcie talerza, AI (OpenAI) rozpoznaje danie, rozbija je na składniki z gramaturą i liczy kalorie, białko, tłuszcze i węglowodany. Wygląd 1:1 jak Grochu's tracker (czerń, Outfit + JetBrains Mono, morskie animacje), tylko akcent jasnoniebieski zamiast zielonego.
 Czysty HTML/CSS/JS, bez budowania. Konto i synchronizacja przez ten sam projekt Supabase co tracker (to samo konto e-mail + hasło).
 
 ## Uruchomienie lokalnie
@@ -14,7 +14,7 @@ i otwórz http://localhost:5174.
 ## Konfiguracja Supabase (jednorazowo)
 
 1. **Baza:** Supabase → SQL Editor → New query → wklej `supabase/setup.sql` → Run. Tworzy tabelę `makro_data` (RLS, Realtime) i licznik dziennych skanów.
-2. **Klucz AI:** Edge Functions → Secrets → dodaj `ANTHROPIC_API_KEY` (klucz z console.anthropic.com). Opcjonalnie `MEAL_SCAN_LIMIT` (domyślnie 30 skanów dziennie na osobę).
+2. **Klucz AI:** Edge Functions → Secrets → dodaj `OPENAI_API_KEY` (klucz z platform.openai.com, konto API z doładowanym saldem — ChatGPT Plus się nie liczy). Opcjonalnie `OPENAI_MODEL` (domyślnie `gpt-6-luna`, jak w Foodini) i `MEAL_SCAN_LIMIT` (domyślnie 30 skanów dziennie na osobę).
 3. **Funkcja:** Edge Functions → Deploy a new function → Via Editor → nazwa `meal-scan` → wklej `supabase/functions/meal-scan/index.ts` → Deploy (zostaw włączone „Verify JWT”).
    Albo z terminala: `supabase functions deploy meal-scan --project-ref xumjkmfctdutouvfgzsh`.
 
@@ -38,5 +38,5 @@ Po zmianach w plikach podbij wersję: `VERSION` w `sw.js` oraz `?v=` w `index.ht
 - `css/styles.css` – wygląd (styl trackera + część makro)
 - `js/app.js` – logika, widoki, skanowanie, animacje
 - `js/cloud.js` – konto, synchronizacja (tabela `makro_data`), wywołanie funkcji AI
-- `supabase/setup.sql`, `supabase/functions/meal-scan/index.ts` – baza i funkcja AI (Claude Opus 5.5)
+- `supabase/setup.sql`, `supabase/functions/meal-scan/index.ts` – baza i funkcja AI (OpenAI)
 - `manifest.webmanifest`, `sw.js`, `icons/` – PWA

@@ -1,12 +1,12 @@
 /* Grochu's makro — service worker: aplikacja działa offline. Dane posiłków nie są tu przechowywane (zostają w localStorage). */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `gmakro-${VERSION}`;
 const SHELL = [
   './',
   'index.html',
-  'css/styles.css?v=1',
-  'js/cloud.js?v=1',
-  'js/app.js?v=1',
+  'css/styles.css?v=2',
+  'js/cloud.js?v=2',
+  'js/app.js?v=2',
   'manifest.webmanifest',
   'icons/favicon.png',
   'icons/icon-192.png',
