@@ -458,6 +458,7 @@
     const logged = !!window.Cloud?.user || !window.Cloud;
     $('auth').hidden = logged;
     $('app-main').hidden = !logged;
+    document.body.classList.toggle('gate', !logged); // ekran logowania bez animacji w tle (iPhone)
     // kursor w polu e-mail tylko na komputerze — iPhone w trybie aplikacji źle znosi focus() bez dotyku
     if (!logged) { close(); if (matchMedia('(hover: hover)').matches && !document.activeElement?.closest('#auth')) $('a-email').focus(); }
   }
@@ -630,6 +631,15 @@
   // Morze w tle: co kilka sekund z dna wypływa pojedynczy bąbelek.
   // iPhone anuluje tapnięcie (i nie otwiera klawiatury), gdy w trakcie dotyku na stronie pojawi się nowy element —
   // dlatego bąbelek nie wypływa chwilę po dotyku, przy wpisywaniu tekstu ani na ekranie logowania.
+  // Obejście błędu iPhone'a (WebKit, także Chrome na iOS): dotknięcie pola czasem nie otwiera klawiatury,
+  // więc pole dostaje focus() ręcznie w obsłudze dotyku — iOS pozwala wtedy pokazać klawiaturę.
+  let tStart = null;
+  document.addEventListener('touchstart', e => { const t = e.touches[0]; tStart = t ? [t.clientX, t.clientY] : null; }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const f = e.target.closest?.('input:not([type=file]):not([type=radio]):not([type=checkbox]), textarea');
+    const t = e.changedTouches[0], moved = !tStart || !t || Math.hypot(t.clientX - tStart[0], t.clientY - tStart[1]) > 10; // przewijanie ≠ dotknięcie
+    if (f && !moved && document.activeElement !== f && !f.disabled) f.focus();
+  }, { passive: true });
   let lastTouch = 0;
   ['touchstart', 'pointerdown', 'focusin'].forEach(t => document.addEventListener(t, () => { lastTouch = Date.now(); }, { passive: true, capture: true }));
   function ambient() {
