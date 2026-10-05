@@ -662,8 +662,20 @@
   setInterval(ambient, 2600);
 
   /* ---------- telefon: bez przybliżania ---------- */
-  ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
-  document.addEventListener('touchmove', e => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
+  // (na ekranie logowania wyłączone — w trybie aplikacji na iPhonie blokowały dotyk pól)
+  const gate = () => document.body.classList.contains('gate');
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => { if (!gate()) e.preventDefault(); }, { passive: false }));
+  document.addEventListener('touchmove', e => { if (!gate() && (e.touches.length > 1 || (e.scale && e.scale !== 1))) e.preventDefault(); }, { passive: false });
+
+  /* ---------- diagnostyka ekranu logowania (iPhone, tryb aplikacji): co dostaje dotknięcie i czy pole ma focus ---------- */
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const seen = [];
+  const diag = m => { const el = document.querySelector('.ver'); if (!el || !gate()) return; if (m) { seen.push(m); if (seen.length > 5) seen.shift(); } el.textContent = `wersja 6 · ${standalone ? 'aplikacja' : 'przeglądarka'} · ${seen.length ? seen.join(' → ') : 'dotknij pola e-mail'}`; };
+  diag('');
+  ['touchstart', 'touchend', 'pointerdown', 'click'].forEach(t => document.addEventListener(t, e => {
+    const x = e.target; diag(`${t === 'pointerdown' ? 'pdown' : t}:${x.id || x.tagName?.toLowerCase()}`);
+  }, { passive: true, capture: true }));
+  document.addEventListener('focusin', e => diag(`FOCUS:${e.target.id || e.target.tagName}`), true);
 
   /* ---------- PWA ---------- */
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {

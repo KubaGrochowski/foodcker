@@ -554,4 +554,5 @@ input,textarea,select{-webkit-user-select:text;user-select:text;-webkit-touch-ca
 /* ekran logowania: bez animacji w tle (iPhone potrafi wtedy ignorować dotknięcie pól) */
 body.gate .seabed,body.gate .amb,body.gate .sea{display:none}
 body.gate .auth-brand img,body.gate .auth-card{animation:none}
+html:has(body.gate),body.gate{touch-action:auto}
 .ver{text-align:center;font:500 11px var(--f-mono);color:var(--ink-3);margin-top:-8px}
