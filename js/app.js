@@ -138,7 +138,7 @@
     // historia tego dnia: najnowsze posiłki na górze (pełna historia jest w menu)
     const newest = meals.slice().sort((a, b) => (b.at || '').localeCompare(a.at || '') || (b.created || 0) - (a.created || 0));
     let list = meals.length ? `<div class="mgrp" style="--i:0"><h3>Posiłki<em>${meals.length} · ${r0(tot.kcal)} kcal</em></h3></div>` + newest.map((m, i) => mealHtml(m, i + 1, { type: true })).join('') : `<p class="empty">Brak posiłków tego dnia</p>`;
-    const ring = `<div class="ring${p > 1.1 ? ' over' : ''}" style="--lv:${lv}" data-lvk="${k}"><i class="wv"></i><i class="wv b"></i><div class="ring-t"><small>zjedzone</small><b data-cnt="ring-kcal">${r0(tot.kcal)}</b><small>z ${nf(g.kcal)} kcal</small><em>${Math.round(p * 100)}%</em></div></div>`;
+    const ring = `<div class="ring${p > 1.1 ? ' over' : ''}" style="--lv:${lv}" data-lvk="${k}"><i class="wv"></i><i class="wv b"></i><div class="ring-t"><b data-cnt="ring-kcal">${r0(tot.kcal)}</b><small>z ${nf(g.kcal)} kcal</small></div></div>`;
     el.className = slideDir > 0 ? 'slide-l' : slideDir < 0 ? 'slide-r' : '';
     el.innerHTML = `<div class="dgrid dslide"><div class="panel">${ring}<div class="macros">${macroRow('p', 'Białko', tot.p, g.p)}${macroRow('f', 'Tłuszcze', tot.f, g.f)}${macroRow('c', 'Węglowodany', tot.c, g.c)}</div></div>
       <div class="mlist${hello ? ' hello' : animList || slideDir ? ' enter' : ''}">${list}</div></div>`;
@@ -266,16 +266,9 @@
   })().catch(e => { detectorP = null; throw e; });
   function openBarcode(type) {
     const job = ++scanJob;
-    overlay.innerHTML = sheet('Kod kreskowy', 'Open Food Facts', `
-      <div class="bc" id="bc"><video id="bc-video" playsinline muted autoplay></video><div class="bc-frame"><i class="corner a"></i><i class="corner b"></i><i class="corner c"></i><i class="corner d"></i><i class="bc-line"></i></div></div>
-      <p class="scan-msg" id="bc-msg"><span>Uruchamiam aparat…</span></p>
-      <div class="field"><label for="bc-code">Albo wpisz numer spod kodu</label><div class="bc-row"><input id="bc-code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="14" placeholder="np. 5900512320007" autocomplete="off"><button class="primary" id="bc-go">Szukaj</button></div></div>
-      <button class="linkish" data-manual>Wpisz ręcznie</button>`, 'Kod kreskowy');
-    const msg = m => { const el = $('bc-msg'); if (el) el.innerHTML = `<span>${m}</span>`; };
-    overlay.querySelector('[data-manual]').addEventListener('click', () => { stopCam(); openMealForm(newDraft(type)); });
-    const go = () => { const c = $('bc-code').value.replace(/\D/g, ''); if (c.length >= 8) { stopCam(); lookup(c, type, job); } else msg('Kod ma co najmniej 8 cyfr'); };
-    $('bc-go').addEventListener('click', go);
-    $('bc-code').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+    // samo okno aparatu — komunikaty wyskakują jako powiadomienia
+    overlay.innerHTML = sheet('Kod kreskowy', '', `
+      <div class="bc" id="bc"><video id="bc-video" playsinline muted autoplay></video><div class="bc-frame"><i class="corner a"></i><i class="corner b"></i><i class="corner c"></i><i class="corner d"></i><i class="bc-line"></i></div></div>`, 'Kod kreskowy');
     (async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error('no-cam');
@@ -283,7 +276,6 @@
         if (job !== scanJob) { stream.getTracks().forEach(t => t.stop()); return; }
         camStream = stream;
         const v = $('bc-video'); v.srcObject = stream; await v.play().catch(() => { });
-        msg('Nakieruj aparat na kod kreskowy');
         const det = await getDetector();
         const tick = async () => {
           if (job !== scanJob || !camStream) return;
@@ -299,27 +291,24 @@
       } catch (e) {
         if (job !== scanJob) return;
         $('bc')?.classList.add('off');
-        msg(e?.name === 'NotAllowedError' ? 'Brak dostępu do aparatu — zezwól w ustawieniach albo wpisz numer' : 'Aparat niedostępny — wpisz numer spod kodu');
+        toast(e?.name === 'NotAllowedError' ? 'Brak dostępu do aparatu — zezwól w ustawieniach' : 'Aparat niedostępny');
       }
     })();
   }
   async function lookup(code, type, job) {
-    const msg = m => { const el = $('bc-msg'); if (el) el.innerHTML = `<span>${m}</span>`; };
-    msg(`Szukam ${code} w Open Food Facts…`);
     let p = null;
     try {
       const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,product_name_pl,generic_name_pl,brands,nutriments,serving_quantity,image_front_small_url`);
       const j = await r.json(); if (j.status === 1) p = j.product;
-    } catch (_) { if (job === scanJob) msg('Brak połączenia z Open Food Facts'); return; }
+    } catch (_) { if (job === scanJob) { toast('Brak połączenia z Open Food Facts'); openBarcode(type); } return; }
     if (job !== scanJob) return;
     const n = p?.nutriments || {};
     const kcal100 = n['energy-kcal_100g'] ?? (n.energy_100g != null ? n.energy_100g / 4.184 : null);
     if (!p || kcal100 == null) {
-      msg(p ? 'Produkt jest w bazie, ale bez wartości odżywczych — wpisz je ręcznie' : `Nie ma produktu ${code} w bazie — wpisz go ręcznie`);
+      // brak w bazie albo bez wartości odżywczych: od razu formularz do wpisania ręcznie
       const name = p ? (p.product_name_pl || p.product_name || '') : '';
-      const btn = document.createElement('button'); btn.className = 'primary'; btn.textContent = 'Wpisz ręcznie';
-      btn.addEventListener('click', () => openMealForm(newDraft(type, { name, items: [{ n: name, g: 100, kcal: 0, p: 0, f: 0, c: 0 }] })));
-      $('bc-msg')?.after(btn);
+      openMealForm(newDraft(type, { name, items: [{ n: name, g: 100, kcal: 0, p: 0, f: 0, c: 0 }] }));
+      toast(p ? 'Produkt bez wartości odżywczych — wpisz je ręcznie' : 'Nie ma tego produktu w bazie — wpisz go ręcznie');
       return;
     }
     const name = (p.product_name_pl || p.product_name || p.generic_name_pl || 'Produkt').trim();
