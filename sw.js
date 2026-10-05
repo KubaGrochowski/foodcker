@@ -1,12 +1,12 @@
 /* Foodcker — service worker: aplikacja działa offline. Dane posiłków nie są tu przechowywane (zostają w localStorage). */
-const VERSION = 'v17';
+const VERSION = 'v18';
 const CACHE = `gmakro-${VERSION}`;
 const SHELL = [
   './',
   'index.html',
-  'css/styles.css?v=17',
-  'js/cloud.js?v=17',
-  'js/app.js?v=17',
+  'css/styles.css?v=18',
+  'js/cloud.js?v=18',
+  'js/app.js?v=18',
   'manifest.webmanifest',
   'icons/favicon.png',
   'icons/icon-192.png',

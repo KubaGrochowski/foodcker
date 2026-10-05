@@ -22,8 +22,8 @@ Bez kroku 2–3 aplikacja działa, ale zamiast wyniku skanu pokaże komunikat i 
 
 ## Obsługa
 
-- **Dodaj posiłek** → zdjęcie z aparatu albo z galerii (+ opcjonalna podpowiedź, np. „bez sosu”). W trakcie: sonar i przypływ na zdjęciu.
-- Wynik: nazwa, składniki z gramami i makro, sumy na żywo. Zmiana gramatury przelicza kcal i makro proporcjonalnie. Można dodać/usunąć składnik, zmienić rodzaj posiłku, dzień i godzinę.
+- **Dodaj posiłek** → zdjęcie z aparatu albo z galerii + wymagany opis zdjęcia (np. „kanapka z szynką, 2 kromki”). W trakcie: sonar i przypływ na zdjęciu.
+- Wynik: nazwa, składniki z gramami i makro, sumy na żywo. Zmiana gramatury przelicza kcal i makro proporcjonalnie (każdy składnik pamięta wartości na 1 g). Można dodać/usunąć składnik, zmienić rodzaj posiłku, dzień i godzinę.
 - **Dzień:** koło kalorii z wodą (poziom = % celu, pomarańczowe po przekroczeniu 110%), rurki białka/tłuszczu/węgli, posiłki pogrupowane (Śniadanie, Obiad, Kolacja, Przekąska). Strzałki ‹ › lub przesunięcie palcem zmienia dzień. Osiągnięcie celu kalorii (100–110%) = fala przez cały ekran.
 - **Historia:** wszystkie posiłki od najnowszych, wyszukiwarka po nazwie i składnikach, „Dodaj dziś” powtarza posiłek na dziś, klik w datę otwiera ten dzień.
 - **Podsumowanie:** 7 / 30 dni — słupki kalorii z linią celu, średnie makro, dni w celu, seria wpisów, najczęstsze posiłki.

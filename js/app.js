@@ -138,7 +138,7 @@
     // historia tego dnia: najnowsze posiłki na górze (pełna historia jest w menu)
     const newest = meals.slice().sort((a, b) => (b.at || '').localeCompare(a.at || '') || (b.created || 0) - (a.created || 0));
     let list = meals.length ? `<div class="mgrp" style="--i:0"><h3>Posiłki<em>${meals.length} · ${r0(tot.kcal)} kcal</em></h3></div>` + newest.map((m, i) => mealHtml(m, i + 1, { type: true })).join('') : `<p class="empty">Brak posiłków tego dnia</p>`;
-    const ring = `<div class="ring${p > 1.1 ? ' over' : ''}" style="--lv:${lv}" data-lvk="${k}"><i class="wv"></i><i class="wv b"></i><div class="ring-t"><b data-cnt="ring-kcal">${r0(tot.kcal)}</b><small>z ${nf(g.kcal)} kcal</small></div></div>`;
+    const ring = `<div class="ring${p > 1.1 ? ' over' : ''}" style="--lv:${lv}" data-lvk="${k}"><i class="wv"></i><div class="ring-t"><b data-cnt="ring-kcal">${r0(tot.kcal)}</b><small>z ${nf(g.kcal)} kcal</small></div></div>`;
     el.className = slideDir > 0 ? 'slide-l' : slideDir < 0 ? 'slide-r' : '';
     el.innerHTML = `<div class="dgrid dslide"><div class="panel">${ring}<div class="macros">${macroRow('p', 'Białko', tot.p, g.p)}${macroRow('f', 'Tłuszcze', tot.f, g.f)}${macroRow('c', 'Węglowodany', tot.c, g.c)}</div></div>
       <div class="mlist${hello ? ' hello' : animList || slideDir ? ' enter' : ''}">${list}</div></div>`;
@@ -236,8 +236,8 @@
       <div class="pick" id="s-pick"><label>${`<span class="bob">${CAM}</span>`}<span>Zrób zdjęcie</span><input type="file" accept="image/*" capture="environment" data-photo>${SEA_SVG}</label><label>${GALLERY}<span>Z galerii</span><input type="file" accept="image/*" data-photo>${SEA_SVG}</label></div>
       <div class="picked" id="s-picked" hidden>
         <div class="ph-prev"><img id="s-img" alt=""><label class="ph-change">Zmień zdjęcie<input type="file" accept="image/*" data-photo></label></div>
-        <div class="field"><label for="s-note">Podpowiedź dla AI <span style="color:var(--ink-3);font-weight:500">(opcjonalnie)</span></label><input id="s-note" type="text" maxlength="160" placeholder="np. 2 kromki, bez sosu, duża porcja" autocomplete="off"></div>
-        <button class="primary" id="s-go">Analizuj posiłek</button>
+        <div class="field"><label for="s-note">Opis zdjęcia</label><input id="s-note" type="text" maxlength="160" required placeholder="np. kanapka z szynką, 2 kromki, bez masła" autocomplete="off"></div>
+        <button class="primary" id="s-go" disabled>Analizuj posiłek</button>
       </div>
       <button class="opt" data-barcode><span class="opt-ic">${BARCODE}</span><span><b>Skanuj kod kreskowy</b><small>z bazy Open Food Facts</small></span><span class="opt-go">›</span></button>
       <button class="linkish" data-manual>Wpisz ręcznie</button>`, 'Dodaj posiłek');
@@ -246,7 +246,11 @@
       file = f; if (prev) URL.revokeObjectURL(prev); prev = URL.createObjectURL(f);
       $('s-img').src = prev; $('s-pick').hidden = true; $('s-picked').hidden = false;
     }));
-    $('s-go').addEventListener('click', () => { if (file) runScan(file, $('s-note').value.trim(), type); });
+    // opis zdjęcia jest wymagany: bez niego przycisk „Analizuj” jest nieaktywny
+    const note = () => $('s-note').value.trim();
+    $('s-note').addEventListener('input', () => { $('s-go').disabled = !note(); });
+    $('s-note').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('s-go').click(); } });
+    $('s-go').addEventListener('click', () => { if (!note()) { toast('Opisz, co jest na zdjęciu'); $('s-note').focus(); return; } if (file) runScan(file, note(), type); });
     overlay.querySelector('[data-barcode]').addEventListener('click', () => openBarcode(type));
     overlay.querySelector('[data-manual]').addEventListener('click', () => openQuickForm(newDraft(type)));
   }
@@ -425,12 +429,17 @@
     const it = draft.items[+row.dataset.i], k = e.target.dataset.k; if (!it) return;
     if (k === 'n') { it.n = e.target.value; return; }
     const v = Math.max(0, parseFloat(String(e.target.value).replace(',', '.')) || 0);
+    // Każdy składnik pamięta wartości na 1 g (it._d). Gramy × gęstość = kcal i makro — niezależnie od tego,
+    // co jest w polu po drodze (skasowane pole, pierwsza cyfra), więc 40 g to zawsze dwa razy więcej niż 20 g.
+    const dens = () => { if (!it._d && +it.g > 0) it._d = { kcal: it.kcal / it.g, p: it.p / it.g, f: it.f / it.g, c: it.c / it.g }; return it._d; };
     if (k === 'g') {
-      // zmiana gramatury przelicza kalorie i makro proporcjonalnie
-      const old = +it.g || 0;
-      if (old > 0 && v > 0) { const s = v / old; ['kcal', 'p', 'f', 'c'].forEach(x => { it[x] = x === 'kcal' ? r0(it[x] * s) : r1(it[x] * s); const inp = row.querySelector(`[data-k="${x}"]`); if (inp) inp.value = it[x]; }); }
+      const d = dens();
       it.g = v;
-    } else it[k] = v;
+      if (d) ['kcal', 'p', 'f', 'c'].forEach(x => { it[x] = x === 'kcal' ? r0(d[x] * v) : r1(d[x] * v); const inp = row.querySelector(`[data-k="${x}"]`); if (inp) inp.value = it[x]; });
+    } else {
+      it[k] = v;
+      const d = dens(); if (d && +it.g > 0) d[k] = v / it.g; // poprawka kcal/makro ręcznie: nowa wartość na 1 g dla dalszych zmian gramów
+    }
     drawTot();
   });
   overlay.addEventListener('click', e => {
