@@ -74,6 +74,7 @@
   const PLUS = '<svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
   const CAM = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.2l1.3-2h6l1.3 2h1.2A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="12.5" r="3.4" stroke="currentColor" stroke-width="1.7"/></svg>';
   const GALLERY = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" stroke="currentColor" stroke-width="1.7"/><circle cx="9" cy="9.5" r="1.7" fill="currentColor"/><path d="M4 17l4.5-4.5 3 3 3.5-4 5 5.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>';
+  const BARCODE = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M7 8v8M10 8v8M12.5 8v8M15 8v8M17 8v8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
   const PLATE = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.3" opacity=".6"/></svg>';
   const AGAIN = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v2.8h-2.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const SEARCH = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.6" stroke="currentColor" stroke-width="1.7"/><path d="M10.5 10.5l3.2 3.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>';
@@ -225,19 +226,110 @@
   /* ---------- okienka ---------- */
   const sheet = (title, sub, body, label, cls = '') => `<div class="scrim" data-close><div class="sheet ${cls}" role="dialog" aria-modal="true" aria-label="${esc(label || title)}"><div class="sheet-h"><div><h2>${title}</h2>${sub ? `<small>${sub}</small>` : ''}</div><button class="x" data-close aria-label="Zamknij">×</button></div>${body}</div></div>`;
   let draft = null, scanJob = 0;
-  const close = () => { overlay.innerHTML = ''; draft = null; scanJob++; };
+  const close = () => { stopCam(); overlay.innerHTML = ''; draft = null; scanJob++; };
   overlay.addEventListener('click', e => { if (e.target.hasAttribute('data-close')) close(); });
 
-  // 1. wybór zdjęcia
+  // 1. wybór: zdjęcie (aparat / galeria → podpowiedź dla AI → analiza), kod kreskowy albo wpisanie ręczne
   function openScan(type) {
     const k = key(selDay);
-    overlay.innerHTML = sheet('Skanuj posiłek', view === 'day' && k !== todayKey() ? dateLabel(k) : 'Zdjęcie talerza → kalorie i makro', `
-      <div class="pick"><label>${`<span class="bob">${CAM}</span>`}<span>Zrób zdjęcie</span><input type="file" accept="image/*" capture="environment" data-photo>${SEA_SVG}</label><label>${GALLERY}<span>Z galerii</span><input type="file" accept="image/*" data-photo>${SEA_SVG}</label></div>
-      <div class="field"><label for="s-note">Podpowiedź dla AI <span style="color:var(--ink-3);font-weight:500">(opcjonalnie)</span></label><input id="s-note" type="text" maxlength="160" placeholder="np. 2 kromki, bez sosu, duża porcja" autocomplete="off"></div>
-      <p class="hint">Najlepiej z góry, cały talerz w kadrze, przy dobrym świetle.</p>
+    let file = null, prev = null;
+    overlay.innerHTML = sheet('Skanuj posiłek', view === 'day' && k !== todayKey() ? dateLabel(k) : '', `
+      <div class="pick" id="s-pick"><label>${`<span class="bob">${CAM}</span>`}<span>Zrób zdjęcie</span><input type="file" accept="image/*" capture="environment" data-photo>${SEA_SVG}</label><label>${GALLERY}<span>Z galerii</span><input type="file" accept="image/*" data-photo>${SEA_SVG}</label></div>
+      <div class="picked" id="s-picked" hidden>
+        <div class="ph-prev"><img id="s-img" alt=""><label class="ph-change">Zmień zdjęcie<input type="file" accept="image/*" data-photo></label></div>
+        <div class="field"><label for="s-note">Podpowiedź dla AI <span style="color:var(--ink-3);font-weight:500">(opcjonalnie)</span></label><input id="s-note" type="text" maxlength="160" placeholder="np. 2 kromki, bez sosu, duża porcja" autocomplete="off"></div>
+        <button class="primary" id="s-go">Analizuj posiłek</button>
+      </div>
+      <button class="opt" data-barcode><span class="opt-ic">${BARCODE}</span><span><b>Skanuj kod kreskowy</b><small>z bazy Open Food Facts</small></span><span class="opt-go">›</span></button>
       <button class="linkish" data-manual>Wpisz ręcznie</button>`, 'Skanuj posiłek');
-    overlay.querySelectorAll('[data-photo]').forEach(inp => inp.addEventListener('change', () => { const f = inp.files?.[0]; if (f) runScan(f, $('s-note').value.trim(), type); }));
+    overlay.querySelectorAll('[data-photo]').forEach(inp => inp.addEventListener('change', () => {
+      const f = inp.files?.[0]; if (!f) return;
+      file = f; if (prev) URL.revokeObjectURL(prev); prev = URL.createObjectURL(f);
+      $('s-img').src = prev; $('s-pick').hidden = true; $('s-picked').hidden = false;
+      const sc = overlay.querySelector('.sheet'); if (sc) bubbles($('s-img'), 10);
+    }));
+    $('s-go').addEventListener('click', () => { if (file) runScan(file, $('s-note').value.trim(), type); });
+    overlay.querySelector('[data-barcode]').addEventListener('click', () => openBarcode(type));
     overlay.querySelector('[data-manual]').addEventListener('click', () => openMealForm(newDraft(type)));
+  }
+
+  /* ---------- kod kreskowy: aparat + Open Food Facts (darmowa baza produktów, bez klucza) ---------- */
+  let camStream = null, bcLoop = 0;
+  const stopCam = () => { clearTimeout(bcLoop); camStream?.getTracks().forEach(t => t.stop()); camStream = null; };
+  // iPhone nie ma wbudowanego BarcodeDetector — wtedy ładujemy zamiennik (ZXing w WebAssembly)
+  let detectorP = null;
+  const getDetector = () => detectorP ??= (async () => {
+    const formats = ['ean_13', 'ean_8', 'upc_a', 'upc_e'];
+    if ('BarcodeDetector' in window) { try { const ok = await window.BarcodeDetector.getSupportedFormats(); if (formats.some(f => ok.includes(f))) return new window.BarcodeDetector({ formats }); } catch (_) { } }
+    const m = await import('https://cdn.jsdelivr.net/npm/barcode-detector@2.3.1/dist/es/pure.js/+esm');
+    return new m.BarcodeDetector({ formats });
+  })().catch(e => { detectorP = null; throw e; });
+  function openBarcode(type) {
+    const job = ++scanJob;
+    overlay.innerHTML = sheet('Kod kreskowy', 'Open Food Facts', `
+      <div class="bc" id="bc"><video id="bc-video" playsinline muted autoplay></video><div class="bc-frame"><i class="corner a"></i><i class="corner b"></i><i class="corner c"></i><i class="corner d"></i><i class="bc-line"></i></div></div>
+      <p class="scan-msg" id="bc-msg"><span>Uruchamiam aparat…</span></p>
+      <div class="field"><label for="bc-code">Albo wpisz numer spod kodu</label><div class="bc-row"><input id="bc-code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="14" placeholder="np. 5900512320007" autocomplete="off"><button class="primary" id="bc-go">Szukaj</button></div></div>
+      <button class="linkish" data-manual>Wpisz ręcznie</button>`, 'Kod kreskowy');
+    const msg = m => { const el = $('bc-msg'); if (el) el.innerHTML = `<span>${m}</span>`; };
+    overlay.querySelector('[data-manual]').addEventListener('click', () => { stopCam(); openMealForm(newDraft(type)); });
+    const go = () => { const c = $('bc-code').value.replace(/\D/g, ''); if (c.length >= 8) { stopCam(); lookup(c, type, job); } else msg('Kod ma co najmniej 8 cyfr'); };
+    $('bc-go').addEventListener('click', go);
+    $('bc-code').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+    (async () => {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('no-cam');
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+        if (job !== scanJob) { stream.getTracks().forEach(t => t.stop()); return; }
+        camStream = stream;
+        const v = $('bc-video'); v.srcObject = stream; await v.play().catch(() => { });
+        msg('Nakieruj aparat na kod kreskowy');
+        const det = await getDetector();
+        const tick = async () => {
+          if (job !== scanJob || !camStream) return;
+          try {
+            if (v.readyState >= 2) {
+              const found = (await det.detect(v)).find(b => /^\d{8,14}$/.test(b.rawValue));
+              if (found && job === scanJob) { navigator.vibrate?.(40); const bc = $('bc'); if (bc) { bc.classList.add('hit'); bubbles(bc, 12); } stopCam(); lookup(found.rawValue, type, job); return; }
+            }
+          } catch (_) { }
+          bcLoop = setTimeout(tick, 180);
+        };
+        tick();
+      } catch (e) {
+        if (job !== scanJob) return;
+        $('bc')?.classList.add('off');
+        msg(e?.name === 'NotAllowedError' ? 'Brak dostępu do aparatu — zezwól w ustawieniach albo wpisz numer' : 'Aparat niedostępny — wpisz numer spod kodu');
+      }
+    })();
+  }
+  async function lookup(code, type, job) {
+    const msg = m => { const el = $('bc-msg'); if (el) el.innerHTML = `<span>${m}</span>`; };
+    msg(`Szukam ${code} w Open Food Facts…`);
+    let p = null;
+    try {
+      const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,product_name_pl,generic_name_pl,brands,nutriments,serving_quantity,image_front_small_url`);
+      const j = await r.json(); if (j.status === 1) p = j.product;
+    } catch (_) { if (job === scanJob) msg('Brak połączenia z Open Food Facts'); return; }
+    if (job !== scanJob) return;
+    const n = p?.nutriments || {};
+    const kcal100 = n['energy-kcal_100g'] ?? (n.energy_100g != null ? n.energy_100g / 4.184 : null);
+    if (!p || kcal100 == null) {
+      msg(p ? 'Produkt jest w bazie, ale bez wartości odżywczych — wpisz je ręcznie' : `Nie ma produktu ${code} w bazie — wpisz go ręcznie`);
+      const name = p ? (p.product_name_pl || p.product_name || '') : '';
+      const btn = document.createElement('button'); btn.className = 'primary'; btn.textContent = 'Wpisz ręcznie';
+      btn.addEventListener('click', () => openMealForm(newDraft(type, { name, items: [{ n: name, g: 100, kcal: 0, p: 0, f: 0, c: 0 }] })));
+      $('bc-msg')?.after(btn);
+      return;
+    }
+    const name = (p.product_name_pl || p.product_name || p.generic_name_pl || 'Produkt').trim();
+    const brand = (p.brands || '').split(',')[0].trim();
+    const g = Math.round(+p.serving_quantity) > 0 ? Math.round(+p.serving_quantity) : 100, k = g / 100;
+    const item = { n: brand && !name.toLowerCase().includes(brand.toLowerCase()) ? `${name} (${brand})` : name, g, kcal: r0(kcal100 * k), p: r1((+n.proteins_100g || 0) * k), f: r1((+n.fat_100g || 0) * k), c: r1((+n.carbohydrates_100g || 0) * k) };
+    let th = null;
+    try { if (p.image_front_small_url) th = await shrink(await (await fetch(p.image_front_small_url)).blob(), 120, .7); } catch (_) { }
+    if (job !== scanJob) return;
+    openMealForm(newDraft(type, { name, items: [item], th, src: 'Open Food Facts', comment: `Na 100 g: ${r0(kcal100)} kcal · B ${nf(+n.proteins_100g || 0)} · T ${nf(+n.fat_100g || 0)} · W ${nf(+n.carbohydrates_100g || 0)}. Wpisz, ile zjadłeś — reszta przeliczy się sama.` }));
   }
   const newDraft = (type, extra = {}) => { const today = key(selDay) === todayKey() || view !== 'day'; const day = view === 'day' ? key(selDay) : todayKey(); return { id: null, day, at: today ? nowTime() : '12:00', type: type || typeByHour(today ? new Date().getHours() : 12), name: '', items: [{ n: '', g: 100, kcal: 0, p: 0, f: 0, c: 0 }], th: null, ai: false, ...extra }; };
 
@@ -309,17 +401,17 @@
   function openMealForm(d) {
     draft = JSON.parse(JSON.stringify(d));
     const editing = !!d.id;
-    const photo = d.big || d.th;
+    const photo = d.big || (d.src ? null : d.th); // produkt z kodu: mała miniatura nie nadaje się na duże zdjęcie
     const body = `
       ${photo ? `<div class="ph-big"><img src="${esc(photo)}" alt="">${d.conf ? `<span class="conf">AI · pewność: ${{ high: 'wysoka', medium: 'średnia', low: 'niska' }[d.conf] || esc(d.conf)}</span>` : ''}${SEA_SVG}</div>` : ''}
-      ${d.comment ? `<div class="ai-note"><b>AI:</b> ${esc(d.comment)}</div>` : ''}
+      ${d.comment ? `<div class="ai-note">${d.src && d.th ? `<img class="ai-th" src="${esc(d.th)}" alt="">` : ''}<b>${esc(d.src || 'AI')}:</b> ${esc(d.comment)}</div>` : ''}
       <div class="field"><label for="f-name">Nazwa</label><input id="f-name" type="text" maxlength="80" value="${esc(d.name)}" placeholder="np. Owsianka z bananem" autocomplete="off"></div>
       <div class="tot" id="f-tot"></div>
       <div class="field"><span class="lab">Składniki</span><div class="items" id="f-items"></div><button type="button" class="addit" id="f-add">+ Składnik</button></div>
       <div class="field"><span class="lab">Posiłek</span><div class="seg seg4">${TYPES.map(([v, l]) => `<label><input type="radio" name="f-type" value="${v}"${d.type === v ? ' checked' : ''}>${l}</label>`).join('')}</div></div>
       <div class="row-tm"><div class="field"><label for="f-day">Dzień</label><input id="f-day" type="date" value="${d.day}"></div><div class="field"><label for="f-at">Godzina</label><input id="f-at" type="time" value="${esc(d.at || '')}"></div></div>
       <div class="sheet-foot"><button class="primary" id="f-save">${editing ? 'Zapisz' : 'Dodaj do dnia'}</button>${editing ? `<button class="danger" id="f-del">Usuń</button>` : ''}</div>`;
-    overlay.innerHTML = sheet(editing ? 'Posiłek' : d.ai ? 'Wynik skanu' : 'Nowy posiłek', editing ? dateLabel(d.day) : '', body, 'Posiłek', 'wide');
+    overlay.innerHTML = sheet(editing ? 'Posiłek' : d.ai ? 'Wynik skanu' : d.src ? 'Produkt' : 'Nowy posiłek', editing ? dateLabel(d.day) : '', body, 'Posiłek', 'wide');
     drawItems(); drawTot(true);
     $('f-add').addEventListener('click', () => { draft.items.push({ n: '', g: 100, kcal: 0, p: 0, f: 0, c: 0 }); drawItems(draft.items.length - 1); drawTot(); });
     $('f-save').addEventListener('click', saveDraft);
