@@ -9,16 +9,12 @@
     OPENAI_API_KEY   — klucz z platform.openai.com (wymagany)
     OPENAI_MODEL     — opcjonalnie, domyślnie gpt-6-luna (jak w Foodini)
     MEAL_SCAN_LIMIT  — opcjonalnie, domyślnie 30 skanów dziennie na użytkownika
-  SUPABASE_URL, SUPABASE_ANON_KEY i SUPABASE_SERVICE_ROLE_KEY Supabase dostarcza sam.
+  SUPABASE_URL Supabase dostarcza sam. Funkcja nie potrzebuje kluczy Supabase: sprawdza użytkownika jego własnym tokenem.
 */
-import { createClient } from "npm:@supabase/supabase-js@2";
-
 const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY");
 const MODEL = Deno.env.get("OPENAI_MODEL") ?? "gpt-6-luna";
 const DAILY_LIMIT = Number(Deno.env.get("MEAL_SCAN_LIMIT") ?? "30");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -76,11 +72,10 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Tylko POST" }, 405);
   if (!OPENAI_KEY) return json({ error: "Brak klucza OPENAI_API_KEY w Supabase" }, 500);
 
-  // kto pyta: zalogowany użytkownik aplikacji
-  const auth = req.headers.get("Authorization") ?? "";
-  const userClient = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: auth } } });
-  const { data: { user } } = await userClient.auth.getUser();
-  if (!user) return json({ error: "Zaloguj się" }, 401);
+  // kto pyta: zalogowany użytkownik aplikacji (jego token + klucz publiczny aplikacji)
+  const sb = { apikey: req.headers.get("apikey") ?? "", Authorization: req.headers.get("Authorization") ?? "" };
+  const who = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: sb });
+  if (!who.ok) return json({ error: "Zaloguj się" }, 401);
 
   let body: { image?: string; mediaType?: string; note?: string };
   try { body = await req.json(); } catch { return json({ error: "Zły format zapytania" }, 400); }
@@ -89,10 +84,12 @@ Deno.serve(async (req) => {
   const mediaType = ["image/jpeg", "image/png", "image/webp"].includes(body.mediaType ?? "") ? body.mediaType! : "image/jpeg";
   const note = String(body.note ?? "").slice(0, 160).trim();
 
-  // dzienny limit
-  const admin = createClient(SUPABASE_URL, SERVICE_KEY);
-  const { data: ok, error: limErr } = await admin.rpc("makro_take_scan", { p_user: user.id, p_limit: DAILY_LIMIT });
-  if (limErr) return json({ error: "Limit: " + limErr.message }, 500);
+  // dzienny limit (funkcja w bazie liczy skany zalogowanego użytkownika)
+  const lim = await fetch(`${SUPABASE_URL}/rest/v1/rpc/makro_take_scan`, {
+    method: "POST", headers: { ...sb, "Content-Type": "application/json" }, body: JSON.stringify({ p_limit: DAILY_LIMIT }),
+  });
+  if (!lim.ok) return json({ error: "Limit: " + (await lim.text()).slice(0, 200) + " (czy uruchomiono setup.sql?)" }, 500);
+  const ok = await lim.json();
   if (!ok) return json({ error: `Dzienny limit ${DAILY_LIMIT} skanów wykorzystany` }, 429);
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
