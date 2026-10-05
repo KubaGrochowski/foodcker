@@ -351,11 +351,8 @@ button:not(:disabled):active{transform:scale(.96)}
 .mac > b{font:600 13px var(--f-mono);color:var(--ink-2);font-variant-numeric:tabular-nums}
 .mac > b em{font-style:normal;color:var(--ink)}
 .tube{grid-column:1/-1;position:relative;height:12px;border-radius:999px;background:var(--surface-3);overflow:hidden}
-.tube i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:inherit;background:repeating-linear-gradient(115deg,var(--m) 0 10px,color-mix(in srgb,var(--m) 72%,#fff) 10px 14px,var(--m) 14px 24px);background-size:48px 100%;animation:tide-x 1.6s linear infinite;transition:width .7s cubic-bezier(.3,.7,.3,1)}
-.tube i::after{content:"";position:absolute;right:-1px;top:-4px;bottom:-4px;width:8px;border-radius:50%;background:color-mix(in srgb,var(--m) 60%,#fff);opacity:.55;animation:crest 1.2s ease-in-out infinite}
-.tube.over i{background:repeating-linear-gradient(115deg,var(--warn) 0 10px,#FDBA74 10px 14px,var(--warn) 14px 24px);background-size:48px 100%}
-@keyframes tide-x{to{background-position:48px 0}}
-@keyframes crest{50%{transform:scaleY(.6) translateX(-2px)}}
+.tube i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:inherit;background:var(--m);transition:width .7s cubic-bezier(.3,.7,.3,1)} /* jednolity kolor, bez ruchu */
+.tube.over i{background:var(--warn)}
 .mac.hit > b em{color:var(--m)}
 .mac.p{--m:var(--p)}.mac.f{--m:var(--f)}.mac.c{--m:var(--c)}
 
