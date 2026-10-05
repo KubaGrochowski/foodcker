@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "makro", "runtimeExecutable": "node", "runtimeArgs": [".claude/serve.js", "5174"], "port": 5174 }
+  ]
+}
