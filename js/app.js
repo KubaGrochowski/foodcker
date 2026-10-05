@@ -458,7 +458,8 @@
     const logged = !!window.Cloud?.user || !window.Cloud;
     $('auth').hidden = logged;
     $('app-main').hidden = !logged;
-    if (!logged) { close(); if (!document.activeElement?.closest('#auth')) $('a-email').focus(); }
+    // kursor w polu e-mail tylko na komputerze — iPhone w trybie aplikacji źle znosi focus() bez dotyku
+    if (!logged) { close(); if (matchMedia('(hover: hover)').matches && !document.activeElement?.closest('#auth')) $('a-email').focus(); }
   }
   function authError(err) {
     const m = (err?.message || '').toLowerCase(), c = err?.code || '';
@@ -627,8 +628,13 @@
     swell();
   }
   // Morze w tle: co kilka sekund z dna wypływa pojedynczy bąbelek.
+  // iPhone anuluje tapnięcie (i nie otwiera klawiatury), gdy w trakcie dotyku na stronie pojawi się nowy element —
+  // dlatego bąbelek nie wypływa chwilę po dotyku, przy wpisywaniu tekstu ani na ekranie logowania.
+  let lastTouch = 0;
+  ['touchstart', 'pointerdown', 'focusin'].forEach(t => document.addEventListener(t, () => { lastTouch = Date.now(); }, { passive: true, capture: true }));
   function ambient() {
-    if (calm() || document.hidden || overlay.innerHTML) return;
+    if (calm() || document.hidden || overlay.innerHTML || !$('auth').hidden) return;
+    if (Date.now() - lastTouch < 4000 || document.activeElement?.matches('input, textarea, select')) return;
     const s = 4 + Math.random() * 9, x = Math.random() * innerWidth;
     const b = document.createElement('i');
     b.className = 'amb';

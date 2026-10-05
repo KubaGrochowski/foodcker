@@ -547,3 +547,6 @@ button:not(:disabled):active{transform:scale(.96)}
 /* logo w nagłówku */
 .brandrow{display:flex;align-items:center;gap:10px}
 .brand{width:22px;height:22px;border-radius:6px;flex:none;animation:bob 3.2s ease-in-out infinite;transform-origin:50% 90%}
+
+/* iPhone: pola tekstowe zawsze da się kliknąć i zaznaczyć */
+input,textarea,select{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;pointer-events:auto}
