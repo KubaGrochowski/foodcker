@@ -679,13 +679,10 @@
     clearTimeout(tt); tt = setTimeout(() => el.hidden = true, 2600);
   }
 
-  /* ---------- morskie efekty: kręgi na wodzie, fala przez cały ekran, fale przy dolnej krawędzi ---------- */
+  /* ---------- morskie efekty: kręgi na wodzie, fala przez cały ekran ---------- */
   const sea = document.createElement('div');
   sea.className = 'sea'; sea.setAttribute('aria-hidden', 'true'); sea.innerHTML = SEA_SVG;
   document.body.appendChild(sea);
-  const bed = document.createElement('div');
-  bed.className = 'seabed'; bed.setAttribute('aria-hidden', 'true'); bed.innerHTML = SEA_SVG;
-  document.body.appendChild(bed);
   function ripple(x, y, k = 1) {
     if (calm() || (!x && !y)) return;
     [0, 140].forEach(delay => {
