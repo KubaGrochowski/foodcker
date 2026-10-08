@@ -55,8 +55,10 @@
   const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ---------- liczenie ---------- */
-  const r0 = v => Math.round(v || 0);
-  const r1 = v => Math.round((v || 0) * 10) / 10;
+  // najpierw 12 cyfr znaczących — usuwa śmieci z mnożenia ułamków (0,575 × 50 = 28,7499999…), więc 28,75 → 28,8
+  const clean = v => Number((+v || 0).toPrecision(12));
+  const r0 = v => Math.round(clean(v));
+  const r1 = v => Math.round(clean(v) * 10) / 10;
   const nf = v => (+v || 0).toLocaleString('pl-PL', { maximumFractionDigits: 1 });
   function totals(items) {
     return (items || []).reduce((a, it) => ({ kcal: a.kcal + (+it.kcal || 0), p: a.p + (+it.p || 0), f: a.f + (+it.f || 0), c: a.c + (+it.c || 0), g: a.g + (+it.g || 0) }), { kcal: 0, p: 0, f: 0, c: 0, g: 0 });
@@ -315,7 +317,8 @@
     }
     const name = (p.product_name_pl || p.product_name || p.generic_name_pl || 'Produkt').trim();
     const brand = (p.brands || '').split(',')[0].trim();
-    const g = Math.round(+p.serving_quantity) > 0 ? Math.round(+p.serving_quantity) : 100, k = g / 100;
+    // porcja z bazy tylko gdy wygląda na porcję (np. puszka 330 ml); „porcja” = całe opakowanie (mleko 1000 g) → start od 100 g
+    const sq = Math.round(+p.serving_quantity), g = sq > 0 && sq <= 500 ? sq : 100, k = g / 100;
     const item = { n: brand && !name.toLowerCase().includes(brand.toLowerCase()) ? `${name} (${brand})` : name, g, kcal: r0(kcal100 * k), p: r1((+n.proteins_100g || 0) * k), f: r1((+n.fat_100g || 0) * k), c: r1((+n.carbohydrates_100g || 0) * k) };
     let th = null;
     try { if (p.image_front_small_url) th = await shrink(await (await fetch(p.image_front_small_url)).blob(), 120, .7); } catch (_) { }
@@ -410,8 +413,8 @@
   }
   function drawItems(focus = -1) {
     const box = $('f-items'); if (!box) return;
-    box.innerHTML = draft.items.map((it, i) => `<div class="it" data-i="${i}" style="--i:${focus >= 0 ? 0 : i}"><input data-k="n" type="text" value="${esc(it.n)}" placeholder="Składnik" aria-label="Składnik" autocomplete="off"><span class="gw"><input data-k="g" type="number" inputmode="decimal" min="0" value="${it.g || ''}" aria-label="Gramy"></span><button type="button" class="rm" data-rm="${i}" aria-label="Usuń składnik">${XMARK}</button>
-      <div class="it-m">${[['kcal', 'kcal'], ['p', 'B'], ['f', 'T'], ['c', 'W']].map(([k, l]) => `<label>${l}<input data-k="${k}" type="number" inputmode="decimal" min="0" value="${it[k] || it[k] === 0 ? it[k] : ''}"></label>`).join('')}</div></div>`).join('');
+    box.innerHTML = draft.items.map((it, i) => `<div class="it" data-i="${i}" style="--i:${focus >= 0 ? 0 : i}"><input data-k="n" type="text" value="${esc(it.n)}" placeholder="Składnik" aria-label="Składnik" autocomplete="off"><span class="gw"><input data-k="g" type="text" inputmode="decimal" autocomplete="off" value="${it.g || ''}" aria-label="Gramy"></span><button type="button" class="rm" data-rm="${i}" aria-label="Usuń składnik">${XMARK}</button>
+      <div class="it-m">${[['kcal', 'kcal'], ['p', 'B'], ['f', 'T'], ['c', 'W']].map(([k, l]) => `<label>${l}<input data-k="${k}" type="text" inputmode="decimal" autocomplete="off" value="${it[k] || it[k] === 0 ? it[k] : ''}"></label>`).join('')}</div></div>`).join('');
     if (focus >= 0) box.querySelector(`[data-i="${focus}"] input`)?.focus();
   }
   function drawTot(first) {
