@@ -1,6 +1,6 @@
 # Foodcker
 
-Dziennik posiłków w stylu Fitatu: robisz zdjęcie talerza, AI (OpenAI) rozpoznaje danie, rozbija je na składniki z gramaturą i liczy kalorie, białko, tłuszcze i węglowodany. Wygląd 1:1 jak Grochu's tracker (czerń, Outfit + JetBrains Mono, morskie animacje), tylko akcent jasnoniebieski zamiast zielonego.
+Dziennik posiłków w stylu Fitatu: robisz zdjęcie talerza, AI (OpenAI `gpt-6.1-sol`) rozpoznaje składniki i ich gramy oraz podaje wartości na 100 g, a funkcja przelicza je na kalorie, białko, tłuszcze i węglowodany (z kontrolą kcal = 4×B + 9×T + 4×W). Wygląd 1:1 jak Grochu's tracker (czerń, Outfit + JetBrains Mono, morskie animacje), tylko akcent jasnoniebieski zamiast zielonego.
 Czysty HTML/CSS/JS, bez budowania. Konto i synchronizacja przez ten sam projekt Supabase co tracker (to samo konto e-mail + hasło).
 
 ## Uruchomienie lokalnie
@@ -14,7 +14,7 @@ i otwórz http://localhost:5174.
 ## Konfiguracja Supabase (jednorazowo)
 
 1. **Baza:** Supabase → SQL Editor → New query → wklej `supabase/setup.sql` → Run. Tworzy tabelę `makro_data` (RLS, Realtime) i licznik dziennych skanów.
-2. **Klucz AI:** Edge Functions → Secrets → dodaj `OPENAI_API_KEY` (klucz z platform.openai.com, konto API z doładowanym saldem — ChatGPT Plus się nie liczy). Opcjonalnie `OPENAI_MODEL` (domyślnie `gpt-6-luna`, jak w Foodini) i `MEAL_SCAN_LIMIT` (domyślnie 30 skanów dziennie na osobę).
+2. **Klucz AI:** Edge Functions → Secrets → dodaj `OPENAI_API_KEY` (klucz z platform.openai.com, konto API z doładowanym saldem — ChatGPT Plus się nie liczy). Opcjonalnie `OPENAI_MODEL` (domyślnie `gpt-6.1-sol`), `OPENAI_EFFORT` (`low` / `medium` / `high`, domyślnie `medium`) i `MEAL_SCAN_LIMIT` (domyślnie 30 skanów dziennie na osobę).
 3. **Funkcja:** Edge Functions → Deploy a new function → Via Editor → nazwa `meal-scan` → wklej `supabase/functions/meal-scan/index.ts` → Deploy (funkcja sama sprawdza zalogowanego użytkownika, więc „Verify JWT” może być włączone albo wyłączone).
    Albo z terminala: `supabase functions deploy meal-scan --project-ref xumjkmfctdutouvfgzsh`.
 
